@@ -1,0 +1,163 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: Pipes - Api Gateway Kinesis Firehose Pipeline
+
+Parameters:
+  Name:
+    Type: String
+  Stage:
+    Type: String
+
+Resources:
+  DataLakeBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Sub: ${Name}-data-lake${Stage}
+
+  KinesisRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Pricinipal:
+              Service:
+                - firehose.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: KinesisRolePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:AbortMultipartUpload
+                  - s3:GetBucketLocation
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:ListBucketMultiparUploads
+                  - s3:PutObject
+                Resource:
+                  - Fn::GetAtt: [DataLakeBucket, Arn]
+                  - Fn::Join:
+                      - ""
+                      - - Fn::GetAtt: [DataLakeBucket, Arn]
+                        - "/*"
+  KinesisFirehose:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      S3DestinationConfiguration:
+        BucketARN:
+          Fn::GetAtt: [DataLakeBucket, Arn]
+        BufferingHints:
+          IntervalInSeconds: 60
+          SizeInMBs: 10
+        CompresssionFormat: GZIP
+        Prefix: events/
+        RoleARN:
+          Fn::GetAtt: [KinesisRole, Arn]
+
+  RestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name:
+        Fn::Join:
+          - ""
+          - - Fn::Sub: ${Name}-{Stage} 
+            - "-api"
+
+  RestApiPostMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: POST
+      Integration:
+        Type: AWS
+        Credentials:
+          Fn::GetAtt: [RestApiRole, Arn]
+        Uri:
+          Fn::Join:
+            - ""
+            - - "arn:aws:apigateway:"
+              - Ref: AWS::Region
+              - ":firehose:action/PutRecord"
+        IntegrationHttpMethod: POST
+        RequestTemplates:
+          application/json: |
+            #set($key = $context.identity.apiKey)
+            #set($keyname = "apiKey")
+            #set($traceidval = $input.params().get("header").get("X-Amzn-Trace-Id"))
+            #set($bodyname = "body")
+            #set($traceid = "traceid")
+            #set($body = $input.body)
+            #set($quote= '"')
+            #set($b64 = $util.base64Encode("{$quote$keyname$quote:$quote$key$quote,$quote$traceid$quote:$quote$traceidval$quote,$quote$bodyname$quote:$body}"))
+            {
+              "DeliverStreamName": {"Ref": "KinesisFirehose"},
+              "Record": {"Data": "$b64"}
+            }
+        RequestParameters:
+          integration.request.header.Content-Type: "'application/x-amz-json-1.1'"
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseTemplates:
+              application/json: '{"status": "OK"}'
+        MethodResponses:
+          - StatusCode: 200
+        ResourceId:
+          Fn::GetAtt: [RestApi, RootResourceId]
+        RestApiId: 
+          Ref: RestApi
+
+  RestApiRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+              Action:
+                - sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: GatewayRolePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - firehose:PutRecord
+                Resource: 
+                  Fn::GetAtt: [KinesisFirehose, Arn]
+
+  RestApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - ApiGatewayPostMethod
+    Properties:
+      RestApiId: 
+        Ref: RestApi
+        StageName: 
+          Fn::Sub: ${Stage}
+
+Outputs:
+  ApiUrl:
+    Description: Url of your API endpoint
+    Value:
+      Fn::Join:
+        - ''
+        - - https://
+          - Ref: RestApi 
+          - '.execute-api.'
+          - Ref: 'AWS::Region'
+          - '.amazonaws.com/'
+          - Fn::Sub: ${Stage} 
+  

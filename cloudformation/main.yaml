@@ -34,6 +34,16 @@ Resources:
       Handler: index.handler
       CodeUri: ../functions/test/
 
+  APIGatewayNestedStack:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: api-gateway.yaml
+      Parameters:
+        Name:
+          Ref: Name
+        Stage:
+          Ref: Stage
+
 Outputs:
   TestFunctionArn:
     Description: Printing out test function arn
