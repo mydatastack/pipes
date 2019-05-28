@@ -23,16 +23,8 @@ Parameters:
         Type: String
         Default: master
         AllowedPattern: "[A-Za-z0-9-]+"
-    ForceToUpdate:
-        Type: String
-        Default: true
-        AllowedValues:
-          - true
-          - false
 
 Resources:
-    
-    # CodeBuild project and resources (S3 Bucket for build artifacts, Role, Project)
     BuildArtifactsBucket:
         Type: AWS::S3::Bucket
     CodeBuildServiceRole:
