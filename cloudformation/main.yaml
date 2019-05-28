@@ -21,7 +21,7 @@ Globals:
     Runtime: nodejs10.x
     Timeout: 20
     MemorySize: 128
-    Environemnt:
+    Environment:
       Variables:
         NODE_ENV:
           Fn::Sub: ${Stage}
