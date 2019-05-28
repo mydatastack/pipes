@@ -2,7 +2,7 @@
 # Just to run an update
 # *** Change this to the desired name of the Cloudformation stack of 
 # your Pipeline (*not* the stack name of your app)
-CODEPIPELINE_STACK_NAME="pipes-core-stack"
+CODEPIPELINE_STACK_NAME="pipes-core-pipeline"
 
 if [ -z ${1} ]
 then
