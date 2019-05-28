@@ -12,8 +12,8 @@ phases:
   build:
     commands:
       - echo "Starting build `date` in `pwd`"
-        #- cd ../../../
-        #- aws cloudformation package --template-file infrastructure/main.yaml --s3-bucket $BUILD_OUTPUT_BUCKET --output-template-file app-output_sam.yaml
+      - cd ../
+      - aws cloudformation package --template-file cloudformation/main.yaml --s3-bucket $BUILD_OUTPUT_BUCKET --output-template-file app-output_sam.yaml
       - echo "Ending build `date` in `pwd`"
   post_build:
     commands:

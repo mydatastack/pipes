@@ -23,6 +23,12 @@ Parameters:
         Type: String
         Default: master
         AllowedPattern: "[A-Za-z0-9-]+"
+    ForceToUpdate:
+        Type: String
+        Default: true
+        AllowedValues:
+          - true
+          - false
 
 Resources:
     
@@ -65,7 +71,8 @@ Resources:
     CodeBuildProject:
         Type: AWS::CodeBuild::Project
         Properties:
-            Name: !Sub '${ServiceName}_build'
+            Name: 
+              Fn::Sub: '${ServiceName}_build'
             TimeoutInMinutes: 5
             Description: Build for Pipes Analytics
             Artifacts:
@@ -76,8 +83,10 @@ Resources:
                 Image: aws/codebuild/nodejs:10.x
                 EnvironmentVariables:
                   - Name: BUILD_OUTPUT_BUCKET
-                    Value: !Ref BuildArtifactsBucket
-            ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+                    Value: 
+                      Ref: BuildArtifactsBucket 
+            ServiceRole: 
+              Fn::GetAtt: [CodeBuildServiceRole, Arn]
             Source: 
                 Type: CODEPIPELINE
                 BuildSpec: codepipeline/buildspec.yaml
