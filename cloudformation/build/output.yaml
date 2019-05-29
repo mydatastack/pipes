@@ -1,21 +1,19 @@
 AWSTemplateFormatVersion: 2010-09-09
 Transform: AWS::Serverless-2016-10-31
 Description: Pipes infrastructure as code
-
 Parameters:
   Name:
     Type: String
     Description: The name of the api
     MinLength: 3
     MaxLength: 30
-    Default: pipes-core-stack-local 
+    Default: pipes-core-stack-local
   Stage:
     Type: String
     Description: The stage of the api
     MinLength: 3
     MaxLength: 20
     Default: pre-dev
-
 Globals:
   Function:
     Runtime: nodejs10.x
@@ -32,20 +30,17 @@ Resources:
       FunctionName:
         Fn::Sub: ${Name}-test-function-${Stage}
       Handler: index.handler
-      CodeUri: ../functions/test/
-
+      CodeUri: s3://tarasowski-pipes-local-deployment/e5c49f497a5e90456fe5e58cede4ad5e
   APIGatewayNestedStack:
     Type: AWS::Serverless::Application
     Properties:
-      Location: ./1-collectors/apig-firehose.yaml
+      Location: https://s3.eu-central-1.amazonaws.com/tarasowski-pipes-local-deployment/2a0aa22b7dd61584ea93d526064633af.template
       Parameters:
         Name:
           Ref: Name
         Stage:
           Ref: Stage
-
 Outputs:
   TestFunctionArn:
     Description: Printing out test function arn
-    Value: 
-      Fn::GetAtt [TestFunction, Arn]
+    Value: Fn::GetAtt [TestFunction, Arn]
