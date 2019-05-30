@@ -1,0 +1,10 @@
+{
+  "userId": "12345",
+  "attributes": {
+    "email": "ceo@amazon.com",
+    "city": "Berlin",
+    "firstName": "Dimitri",
+    "lastName": "Tarasowski"
+  },
+  "app_id": "web" 
+}

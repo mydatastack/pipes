@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "$id": "https://pipesdata.com/schemas/identity.json",
+  "title": "Identity schema",
+  "description": "Schema for identity call validation",
+  "type": "object",
+  "properties": {
+    "userId": {"type": "string"},
+    "attributes": {
+      "type": "object",
+      "properties": {
+        "email": {"type": "string"},
+        "firstName": {"type": "string"},
+        "lastName": {"type": "string"},
+        "city": {"type": "string"}
+      }
+    },
+    "app_id": {"$ref": "context.json#/app_id"}
+  }
+}
+
