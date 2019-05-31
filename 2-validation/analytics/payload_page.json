@@ -1,0 +1,20 @@
+{
+  "anonymous_id": "1b5a9563-a458-4363-96ce-c5a0b8e86153",
+  "platform": "desktop",
+  "context": {
+    "ip": "95.91.211.147",
+    "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 12_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/7.0.4 Mobile/16B92 Safari/605.1.15"
+  },
+  "message_id": "4b5a6783-24ab-4809-9e80-aa6b1ee0746d",
+  "received_at": "2019-05-30T10:55:12.833Z",
+  "sent_at": "2019-05-30T10:55:10.833Z",
+  "timestamp": "2019-05-30T10:55:10.833Z",
+  "name": "Payment",
+  "properties": {
+    "title": "Monthly Payment Page",
+    "url": "https://pipesdata.com",
+    "path": "/monthly-payments"
+  },
+  "type": "page",
+  "user_id": "b55819c6-ccf2-4b68-b46b-58c0b89cb19a"
+}

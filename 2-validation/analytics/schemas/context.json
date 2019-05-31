@@ -1,7 +1,103 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema",
   "$id": "https://pipesdata.com/schemas/context.json",
-  "app_id": {"type": "string"}
-}
-
-
+  "title": "Context Schema",
+  "description": "Validation for the context message that is included in each call",
+  "context": {
+    "type": "object",
+    "properties": {
+      "app": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string"}, 
+          "version": {"type": "string"},
+          "build": {"type": "string"},
+          "namespace": {"type": "string"}
+        }
+      },
+        "campaign": {
+          "type": "object",
+          "properties": {
+            "name":{"type": "string"}, 
+            "source":{"type": "string"}, 
+            "medium":{"type": "string"}, 
+            "term":{"type": "string"}, 
+            "content": {"type": "string"} 
+          }
+        },
+        "device": {
+          "type": "object",
+          "properties": {
+            "id":{"type": "string"}, 
+            "manufacturer":{"type": "string"}, 
+            "model":{"type": "string"}, 
+            "name":{"type": "string"}, 
+            "type": {"type": "string"}, 
+            "ad_tracking_enabled": {"type": "boolean"},
+            "advertising_id": {"type": "boolean"} 
+          }
+        },
+      "ip": {"type": "string"},
+      "locale": {"type": "string"},
+      "timezone": {"type": "string"},
+      "library": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string"}, 
+          "version": {"type": "string"}
+        }
+      },
+      "location": {
+        "type": "object",
+        "properties": {
+          "city": {"type": "string"}, 
+          "country": {"type": "string"},
+          "lat": {"type": "number"},
+          "long": {"type": "number"}
+        }
+      },
+      "network": {
+        "type": "object",
+        "properties": {
+          "bluetooth": {"type": "boolean"}, 
+          "carrier": {"type": "string"},
+          "cellular": {"type": "boolean"},
+          "wifi": {"type": "boolean"}
+        }
+      },
+      "os": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string"}, 
+          "version": {"type": "string"}
+        }
+      },
+      "page": {
+        "type": "object",
+        "properties": {
+          "path": {"type": "boolean"}, 
+          "referrer": {"type": "string"},
+          "search": {"type": "string"},
+          "title": {"type": "string"},
+          "url": {"type": "string"}
+        }
+      },
+      "referrer": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "stirng"}, 
+          "type": {"type": "string"}
+        }
+      },
+      "screen": {
+        "type": "object",
+        "properties": {
+          "width": {"type": "integer"}, 
+          "height": {"type": "integer"},
+          "density": {"type": "integer"}
+        }
+      },
+      "userAgent": {"type": "string"}
+      }
+    }
+  }

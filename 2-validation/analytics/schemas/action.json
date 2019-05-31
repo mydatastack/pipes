@@ -1,4 +1,29 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema",
-  "$id": "https://pipesdata.com/schemas/action.json"
+  "$id": "https://pipesdata.com/schemas/action.json",
+  "title": "Action Message Schema",
+  "description": "Validation for the action message",
+  "type": "object",
+  "required": ["anonymous_id", "type", "event", "message_id", "received_at", "sent_at", "timestamp"],
+  "properties": {
+    "type": {"constant": "action"},
+    "platform": {"type": "string"},
+    "anonymous_id": {"type": "string"},
+    "user_id": {"type": "string"},
+    "event": {"type": "string"},
+    "properties": {
+      "type": "object",
+      "properties": {
+        "category": {"type": "string"},
+        "action": {"type": "string"},
+        "label": {"type": "string"},
+        "value": {"type": "string"}
+      }
+    },
+    "message_id": {"type": "string"},
+    "received_at": {"format": "date-time"},
+    "sent_at": {"format": "date-time"},
+    "timestamp": {"format": "date-time"},
+    "context": {"$ref": "context.json#/context"}
+  }
 }
