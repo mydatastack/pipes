@@ -13,7 +13,7 @@ const ACTION = "action"
 const TRANSACTION = "transaction"
 
 
-const validator = data => {
+const validate = data => {
   const {type} = data
   switch (type) {
     case IDENTITY:
@@ -37,7 +37,7 @@ const redirect = p =>
 
 const main = async data => 
   pipe([
-    validator,
+    validate,
     isValid,
     redirect
   ]) (data)
