@@ -1,6 +1,6 @@
 #!/bin/bash
 TEMPLATES=("main.yaml" "api-gateway.yaml")
-for i in "${TEMPLATES[@]}"; do aws cloudformation validate-template --template-body file://"$i"; done
+for i in "${TEMPLATES[@]}"; do aws cloudformation validate-template --template-body file://1-collectors/"$i"; done
 
 BUCKET=tarasowski-pipes-local-deployment
 STACKNAME=tarasowski-pipes-local-deployment

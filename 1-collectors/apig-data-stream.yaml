@@ -1,0 +1,123 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: Pipes - Api Gateway Kinesis Firehose Pipeline
+
+Parameters:
+  Name:
+    Type: String
+  Stage:
+    Type: String
+
+Resources:
+
+  EventStream:
+    Type: AWS::Kinesis::Stream
+    Properties:
+      Name: 
+        Fn::Sub: ${Name}-stream-${Stage}
+      RetentionPeriodHours: 24
+      ShardCount: 1
+
+  ApiGatewayRestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name:
+        Fn::Join:
+          - ""
+          - - Fn::Sub: ${Name}-${Stage} 
+            - "-api"
+
+  ApiGatewayPostMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false 
+      AuthorizationType: NONE
+      HttpMethod: POST
+      Integration:
+        Type: AWS 
+        Credentials:
+          Fn::GetAtt: [ GatewayRole, Arn ] 
+        Uri:
+          Fn::Join:
+            - ""
+            - - "arn:aws:apigateway:"
+              - Ref: AWS::Region
+              - ":kinesis:action/PutRecord" 
+        IntegrationHttpMethod: POST 
+        RequestTemplates:
+          application/json: !Sub | 
+            #set( $key = $context.identity.apiKey )
+            #set( $keyname = "apiKey" )
+            #set( $traceidval = $input.params().get("header").get("X-Amzn-Trace-Id"))#set( $bodyname = "body" )
+            #set( $traceid = "traceid")
+            #set( $received_at = "received_at")
+            #set( $received_time = $context.requestTime)
+            #set( $body = $input.body )
+            #set( $messageId = $context.requestId)
+            #set( $quote = '"' )
+            #set( $b64 = $util.base64Encode("{$quote$keyname$quote:$quote$key$quote,$quote$traceid$quote:$quote$traceidval$quote,$quote$received_at$quote:$quote$received_time$quote,$quote$bodyname$quote:$body}") )
+            {
+             "StreamName": "${EventStream}", 
+             "PartitionKey": "$messageId",
+             "Data": "$b64" 
+            }
+        RequestParameters: 
+          integration.request.header.Content-Type: "'application/x-amz-json-1.1'"
+        IntegrationResponses:
+          - StatusCode: 200 
+            ResponseTemplates:
+              application/json: '{"status":"OK"}'
+      MethodResponses:
+        - StatusCode: 200
+      ResourceId:
+        Fn::GetAtt: [ ApiGatewayRestApi , RootResourceId ]
+      RestApiId: !Ref ApiGatewayRestApi
+
+  GatewayRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - apigateway.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: GatewayRolePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+                - kinesis:PutRecord
+                - kinesis:PutRecords
+              Resource: "*"
+
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - ApiGatewayPostMethod
+    Properties:
+      RestApiId: 
+        Ref: ApiGatewayRestApi
+      StageName: 
+        Fn::Sub: ${Stage}
+
+Outputs:
+  ApiUrl:
+    Description: Url of your API endpoint
+    Value:
+      Fn::Join:
+        - ''
+        - - https://
+          - Ref: ApiGatewayRestApi 
+          - '.execute-api.'
+          - Ref: 'AWS::Region'
+          - '.amazonaws.com/'
+          - Fn::Sub: ${Stage} 
+  
+
