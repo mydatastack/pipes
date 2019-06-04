@@ -27,7 +27,7 @@ Resources:
   APIGatewayNestedStack:
     Type: AWS::Serverless::Application
     Properties:
-      Location: https://s3.eu-central-1.amazonaws.com/tarasowski-pipes-local-deployment/c779876fb329d0012e941aa05f9c2db5.template
+      Location: https://s3.eu-central-1.amazonaws.com/tarasowski-pipes-local-deployment/45840aef52eacb5e5cdd0cfb1120dba9.template
       Parameters:
         Name:
           Ref: Name

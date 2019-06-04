@@ -13,6 +13,7 @@
     "ajv": "^6.10.0"
   },
   "devDependencies": {
+    "aws-sdk": "^2.467.0",
     "riteway": "^6.0.3"
   }
 }
