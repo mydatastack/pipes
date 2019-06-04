@@ -4,7 +4,7 @@
   "title": "Transaction Message Schema",
   "description": "Validation for the transaction message",
   "type": "object",
-  "required": ["anonymous_id", "type", "properties", "message_id", "received_at", "sent_at", "timestamp"],
+  "required": ["anonymous_id", "type", "properties", "message_id", "received_at", "sent_at"],
   "properties": {
     "type": {"constant": "transaction"},
     "platform": {"type": "string"},
@@ -44,9 +44,9 @@
       }
     },
     "message_id": {"type": "string"},
-    "received_at": {"format": "date-time"},
-    "sent_at": {"format": "date-time"},
-    "timestamp": {"format": "date-time"},
+    "received_at": {"type": "string", "format": "date-time"},
+    "sent_at": {"type": "string", "format": "date-time"},
+    "timestamp": {"type": "string", "format": "date-time"},
     "context": {"$ref": "context.json#/context"}
   }
 }

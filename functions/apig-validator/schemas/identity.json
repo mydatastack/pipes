@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "$id": "https://pipesdata.com/schemas/identity.json",
+  "title": "Identity Message Schema",
+  "description": "Validation for the identity message",
+  "type": "object",
+  "required": ["type", "message_id", "received_at"],
+  "properties": {
+    "type": { "constant": "identity"},
+    "message_id": {"type": "string"},
+    "received_at": {"type": "string"},
+    "data": {
+      "type": "object",
+      "required": ["anonymous_id", "sent_at"], 
+      "properties": {
+        "platform": {"type": "string"},
+        "anonymous_id": {"type": "string"},
+        "user_id": {"type": "string"},
+        "properties": {
+          "type": "object",
+          "properties": {
+            "address":{"type": "string"},
+            "age":{"type": "string"},
+            "birthday":{"type": "string", "format": "date-time"},
+            "company":{"type": "string"},
+            "created_at":{"type": "string", "format": "date-time"},
+            "description":{"type": "string"},
+            "email":{"type": "string"},
+            "first_name":{"type": "string"},
+            "gender":{"type": "string"},
+            "id":{"type": "string"},
+            "last_name":{"type": "string"},
+            "name":{"type": "string"},
+            "phone":{"type": "string"},
+            "title":{"type": "string"},
+            "username":{"type": "string"},
+            "website":{"type": "string"}
+          }
+        }
+      },
+      "sent_at": {"format": "date-time"},
+      "timestamp": {"format": "date-time"},
+      "context": {"$ref": "context.json#/context"}
+    }
+  }
+}
+

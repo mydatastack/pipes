@@ -24,17 +24,10 @@ Globals:
         NODE_ENV:
           Fn::Sub: ${Stage}
 Resources:
-  TestFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName:
-        Fn::Sub: ${Name}-test-function-${Stage}
-      Handler: index.handler
-      CodeUri: s3://tarasowski-pipes-local-deployment/e5c49f497a5e90456fe5e58cede4ad5e
   APIGatewayNestedStack:
     Type: AWS::Serverless::Application
     Properties:
-      Location: https://s3.eu-central-1.amazonaws.com/tarasowski-pipes-local-deployment/96583ba685197f9b53ccc325eea8256b.template
+      Location: https://s3.eu-central-1.amazonaws.com/tarasowski-pipes-local-deployment/c779876fb329d0012e941aa05f9c2db5.template
       Parameters:
         Name:
           Ref: Name
