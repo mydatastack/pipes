@@ -32,6 +32,10 @@ Resources:
       Timeout: 60
       Handler: index.handler 
       CodeUri: ../functions/apig-validator/
+      Environment:
+        Variables:
+          DELIVERY_STREAM_SUCCESS:
+            Fn::GetAtt: [EventFirehose, Arn]
       Policies:
         - Version: 2012-10-17
           Statement:
