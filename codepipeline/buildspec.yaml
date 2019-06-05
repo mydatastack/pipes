@@ -8,7 +8,9 @@ phases:
     commands:
       - echo "Installing dependencies - `pwd`"
       - pip install --upgrade awscli
-      - cd ../functions/apig-validator/
+      - echo "Current working directory"
+      - pwd
+      - cd ./functions/apig-validator/
       - cd npm i --production
       - cd ../../
       - echo "Dependencies install completed `date`"
