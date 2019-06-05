@@ -35,7 +35,7 @@ Resources:
       Environment:
         Variables:
           DELIVERY_STREAM_SUCCESS:
-            Fn::GetAtt: [EventFirehose, Arn]
+            Ref: EventFirehose
       Policies:
         - Version: 2012-10-17
           Statement:
