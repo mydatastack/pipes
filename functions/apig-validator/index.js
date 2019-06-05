@@ -74,7 +74,7 @@ const check = data => {
 
 const validate = data => data.map(e => ({...e, valid: check(e.converted)}))
 
-const buildRecords = data => data.map(e => ({Data: Buffer.from(JSON.stringify(e.converted))}))
+const buildRecords = data => data.map(e => ({Data: Buffer.from(JSON.stringify(e.converted) + "\n")}))
 
 const buildParams = data => ({
   DeliveryStreamName: DELIVERY_STREAM_SUCCESS,

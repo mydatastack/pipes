@@ -155,8 +155,7 @@ Resources:
             #set( $message_id = "message_id")
             #set( $message_id_val = $context.requestId)
             #set( $quote = '"' )
-            #set( $b64 = $util.base64Encode("{$quote$key$quote:$quote$key_val$quote,$quote$message_id$quote:$quote$message_id_val$quote,$quote$trace_id$quote:$quote$trace_id_val$quote,$quote$received_at$quote:$quote$received_at_val$quote,$quote$body$quote:$body_val}
-            #") )
+            #set( $b64 = $util.base64Encode("{$quote$key$quote:$quote$key_val$quote,$quote$message_id$quote:$quote$message_id_val$quote,$quote$trace_id$quote:$quote$trace_id_val$quote,$quote$received_at$quote:$quote$received_at_val$quote,$quote$body$quote:$body_val}"))
             {
              "StreamName": "${EventStream}", 
              "PartitionKey": "$message_id_val",
