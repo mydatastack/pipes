@@ -30,6 +30,7 @@ Resources:
       Runtime: nodejs10.x
       MemorySize: 128
       Timeout: 60
+      ReservedConcurrentExecutions: 1 # remove when the function is safe
       Handler: index.handler 
       CodeUri: ../functions/apig-validator/
       Environment:

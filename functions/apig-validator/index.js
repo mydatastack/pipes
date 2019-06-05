@@ -35,7 +35,18 @@ const decode = pipe([
   toString,
 ])
 
-const jsonParse = event => event.map(e => ({...e, parsed: JSON.parse(e.decoded)}))
+const safeParse = data => {
+  
+  try {
+    return JSON.parse(data)
+  } catch (e) {
+    return []
+  }
+  
+  
+}
+
+const jsonParse = event => event.map(e => ({...e, parsed: safeParse(e.decoded)}))
 
 const safeConvert = data => { 
   try { 
@@ -72,7 +83,16 @@ const check = data => {
   }
 }
 
-const validate = data => data.map(e => ({...e, valid: check(e.converted)}))
+const safeCheck = data => {
+  try {
+    return check(data)
+  } catch (e) {
+    return false
+  }
+  
+}
+
+const validate = data => data.map(e => ({...e, valid: safeCheck(e.converted)}))
 
 const buildRecords = data => data.map(e => ({Data: Buffer.from(JSON.stringify(e.converted) + "\n")}))
 
@@ -121,3 +141,4 @@ const handler = event =>
   main (event)
 
 module.exports.handler = handler 
+
