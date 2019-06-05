@@ -11,7 +11,7 @@ phases:
       - echo "Current working directory"
       - pwd
       - cd ./functions/apig-validator/
-      - cd npm i --production
+      - npm i --production
       - cd ../../
       - echo "Dependencies install completed `date`"
   build:
