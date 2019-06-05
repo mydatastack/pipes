@@ -4,26 +4,32 @@
   "title": "Action Message Schema",
   "description": "Validation for the action message",
   "type": "object",
-  "required": ["anonymous_id", "type", "event", "message_id", "received_at", "sent_at"],
+  "required": ["message_id", "received_at"],
   "properties": {
-    "type": {"constant": "action"},
-    "platform": {"type": "string"},
-    "anonymous_id": {"type": "string"},
-    "user_id": {"type": "string"},
-    "event": {"type": "string"},
-    "properties": {
-      "type": "object",
-      "properties": {
-        "category": {"type": "string"},
-        "action": {"type": "string"},
-        "label": {"type": "string"},
-        "value": {"type": "string"}
-      }
-    },
     "message_id": {"type": "string"},
     "received_at": {"type": "string", "format": "date-time"},
-    "sent_at": {"type": "string", "format": "date-time"},
-    "timestamp": {"type": "string", "format": "date-time"},
-    "context": {"$ref": "context.json#/context"}
+    "body": {
+      "type": "object",
+      "required": ["type", "event", "anonymous_id", "sent_at"],
+      "properties": {
+        "type": {"constant": "identity"},
+        "platform": {"type": "string"},
+        "anonymous_id": {"type": "string"},
+        "user_id": {"type": "string"},
+        "event": {"type": "string"},
+        "properties": {
+          "type": "object",
+          "properties": {
+            "category": {"type": "string"},
+            "action": {"type": "string"},
+            "label": {"type": "string"},
+            "value": {"type": "string"}
+          }
+        }
+      },
+      "sent_at": {"type": "string", "format": "date-time"},
+      "timestamp": {"type": "string", "format": "date-time"},
+      "context": {"$ref": "context.json#/context"}
+    }
   }
 }
