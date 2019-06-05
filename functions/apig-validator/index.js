@@ -57,7 +57,7 @@ const convertEpochToISO = event =>
 
 const check = data => {
   const {body} = data
-
+  console.log("Event type:", body.type)
   switch (body.type) {
     case IDENTITY:
       return ajv.validate(identity, data) ? true : false

@@ -10,10 +10,10 @@
     "received_at": {"type": "string", "format": "date-time"},
     "body": {
       "type": "object",
-      "required": ["type", "ananymous_id", "name", "sent_at"],
+      "required": ["type", "anonymous_id", "name", "sent_at"],
       "properties": {
         "type": {"constant": "page"},
-        "platform": {"constant": "page"},
+        "platform": {"type": "string"},
         "anonymous_id": {"type": "string"},
         "user_id": {"type": "string"},
         "name": {"type": "string"},
