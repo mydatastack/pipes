@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "$id": "https://pipesdata.com/schemas/transaction.json",
+  "title": "Transaction Message Schema",
+  "description": "Validation for the transaction message",
+  "type": "object",
+  "required": ["message_id", "received_at"],
+  "properties": {
+    "message_id": {"type": "string"},
+    "received_at": {"type": "string", "format": "date-time"},
+    "body": {
+      "type": "object",
+      "required": ["type", "anonymous_id", "properties", "sent_at"],
+      "properties": {
+        "type": {"constant": "transaction"},
+        "platform": {"type": "string"},
+        "anonymous_id": {"type": "string"},
+        "user_id": {"type": "string"},
+        "properties": {
+          "type": "object",
+          "required": ["order_id", "total"],
+          "properties": { 
+            "order_id": {"type": "string"},
+            "affiliation": {"type": "string"},
+            "total": {"type": "number"},
+            "tax":{"type": "number"},
+            "shipping":{"type": "number"},
+            "total_base":{"type": "number"},
+            "tax_base":{"type": "number"},
+            "shipping_base": {"type": "number"},
+            "currency_base": {"type": "string"},
+            "city":{"type": "string"},
+            "state":{"type": "string"},
+            "country":{"type": "string"},
+            "currency":{"type": "string"},
+            "item": {
+              "type": "object",
+              "required": ["order_id", "sku", "price", "quantity"],
+              "properties": {
+                "order_id": {"type": "string"},
+                "sku": {"type": "string"},
+                "name":{"type": "string"},
+                "category":{"type": "string"},
+                "price":{"type": "number"},
+                "price_base":{"type": "number"},
+                "quantity":{"type": "number"},
+                "currency": {"type": "string"}   
+              }
+            }
+          }
+        },
+        "sent_at": {"type": "string", "format": "date-time"},
+        "timestamp": {"type": "string", "format": "date-time"},
+        "context": {"$ref": "context.json#/context"}
+      }
+    }
+  }
+}

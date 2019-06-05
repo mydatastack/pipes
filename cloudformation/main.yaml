@@ -26,18 +26,10 @@ Globals:
         NODE_ENV:
           Fn::Sub: ${Stage}
 Resources:
-  TestFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName:
-        Fn::Sub: ${Name}-test-function-${Stage}
-      Handler: index.handler
-      CodeUri: ../functions/test/
-
   APIGatewayNestedStack:
     Type: AWS::Serverless::Application
     Properties:
-      Location: ./1-collectors/apig-firehose.yaml
+      Location: ./apig-data-stream.yaml
       Parameters:
         Name:
           Ref: Name

@@ -1,4 +1,7 @@
 #!/bin/bash
+TEMPLATES=("main.yaml" "apig-data-stream.yaml")
+for i in "${TEMPLATES[@]}"; do aws cloudformation validate-template --template-body file://"$i"; done
+
 BUCKET=tarasowski-pipes-local-deployment
 STACKNAME=tarasowski-pipes-local-deployment
 echo "Starting deployment from local machine"

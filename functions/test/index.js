@@ -1,2 +1,0 @@
-// test
-exports.handler = () => "success"

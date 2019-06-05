@@ -1,0 +1,19 @@
+{
+  "name": "2-validation",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Dimitri Tarasowski",
+  "license": "ISC",
+  "dependencies": {
+    "ajv": "^6.10.0"
+  },
+  "devDependencies": {
+    "aws-sdk": "^2.467.0",
+    "riteway": "^6.0.3"
+  }
+}
