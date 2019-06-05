@@ -27,20 +27,38 @@ const parseEvent = pipe([
   map (encase ("kinesis"))
 ])
 
-const createBuffer = event => event.map(e => ({...e, originalData: e.data, data: Buffer.from(e.data, 'base64')})) 
-const toString = event => event.map(e =>  ({...e, data: e.data.toString('ascii')}))
+const createBuffer = event => event.map(e => ({...e, buffered: Buffer.from(e.data, 'base64')})) 
+const toString = event => event.map(e =>  ({...e, decoded: e.buffered.toString('ascii')}))
 
 const decode = pipe([
   createBuffer,
   toString,
 ])
 
-const jsonParse = event => event.map(e => ({...e, parsed: JSON.parse(e.data)}))
+const jsonParse = event => event.map(e => ({...e, parsed: JSON.parse(e.decoded)}))
+
+const safeConvert = data => { 
+  try { 
+    return new Date(Number(data.parsed.received_at)).toISOString()
+  } catch (e) {
+    return data.parsed.received_at
+  }
+}
+
+const convertEpochToISO = event => 
+  event.map(e => 
+    ({...e, 
+      converted: {
+        ...e.parsed, 
+        received_at: safeConvert (e) 
+      }
+    }))
 
 
 const check = data => {
-  const {type} = data
-  switch (type) {
+  const {body} = data
+
+  switch (body.type) {
     case IDENTITY:
       return ajv.validate(identity, data) ? true : false
     case PAGE:
@@ -54,9 +72,10 @@ const check = data => {
   }
 }
 
-const validate = data => data.map(e => ({...e, valid: check(e.parsed)}))
+const validate = data => data.map(e => ({...e, valid: check(e.converted)}))
 
-const buildRecords = data => data.map(e => ({Data: Buffer.from(e.originalData)}))
+const buildRecords = data => data.map(e => ({Data: Buffer.from(JSON.stringify(e.converted))}))
+
 const buildParams = data => ({
   DeliveryStreamName: DELIVERY_STREAM_SUCCESS,
   Records: data
@@ -67,13 +86,13 @@ const params = pipe([
   buildParams,
 ])
 
-const redirect = data => {
+const divide = data => {
   const valid = data.filter(e => e.valid === true)
   const invalid = data.filter(e => e.valid === false)
   return [valid, invalid]
 } 
 
-const report = stream => x => console.log(stream + " FailedPutCount:", x.FailedPutCount || 0, "\n " + stream + "Inserted Records:", x.RequestResponses && x.RequestResponses.length || 0)
+const report = stream => x => console.log(stream + " FailedPutCount:", x.FailedPutCount || 0, "\n" + stream + " InsertedPutCount:", x.RequestResponses && x.RequestResponses.length || 0)
 
 const sendData = ([valid, invalid]) =>
   Promise.resolve()
@@ -82,20 +101,20 @@ const sendData = ([valid, invalid]) =>
       : [])     
     .then(x => report ("SuccessStream") (x) || "success", e => console.log(e) || "error")
     .then(_ => invalid.length > 0
-      ? Promise.resolve("errors goes to another stream") 
+      ? ({FailedPutCount: 0, RequestResponses: invalid})
       : [])     
     .then(x => report ("ErrorStream") (x) || "success", e => console.log(e) || "error")
     .catch(e => console.log(e) || e)
-
 
 const main = 
   pipe([
     parseEvent,
     decode,
     jsonParse,
+    convertEpochToISO,
     validate,
-    redirect,
-    sendData
+    divide,
+    sendData,
   ]) 
 
 const handler = event =>

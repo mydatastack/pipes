@@ -142,18 +142,16 @@ Resources:
           application/json: !Sub | 
             #set( $key = "apiKey" )
             #set( $key_ = $context.identity.apiKey )
-            #set( $type = "type")
-            #set( $type_val = "identity")
             #set( $trace_id_val = $input.params().get("header").get("X-Amzn-Trace-Id"))#set( $bodyname = "body" )
             #set( $trace_id = "trace_id")
             #set( $received_at = "received_at")
-            #set( $received_at_val = $context.requestTime)
-            #set( $data = "data")
-            #set( $data_val = $input.body)
+            #set( $received_at_val = $context.requestTimeEpoch)
+            #set( $body = "body")
+            #set( $body_val = $input.body)
             #set( $message_id = "message_id")
             #set( $message_id_val = $context.requestId)
             #set( $quote = '"' )
-            #set( $b64 = $util.base64Encode("{$quote$key$quote:$quote$key_val$quote,$quote$type$quote:$quote$type_val$quote,$quote$message_id$quote:$quote$message_id_val$quote,$quote$trace_id$quote:$quote$trace_id_val$quote,$quote$received_at$quote:$quote$received_at_val$quote,$quote$data$quote:$data_val}") )
+            #set( $b64 = $util.base64Encode("{$quote$key$quote:$quote$key_val$quote,$quote$message_id$quote:$quote$message_id_val$quote,$quote$trace_id$quote:$quote$trace_id_val$quote,$quote$received_at$quote:$quote$received_at_val$quote,$quote$body$quote:$body_val}") )
             {
              "StreamName": "${EventStream}", 
              "PartitionKey": "$message_id_val",
