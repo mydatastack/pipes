@@ -246,7 +246,7 @@ Resources:
                   - "/events/"
       SchemaChangePolicy:
         UpdateBehavior: "UPDATE_IN_DATABASE"
-        DeleteBehavior: "LOG"
+        DeleteBehavior: "DEPRECATE_IN_DATABASE"
 
   GlueCrawlerRole:
     Type: AWS::IAM::Role
@@ -298,6 +298,77 @@ Resources:
               Action:
                 - "glue:*"
               Resource: "*"
+
+  GlueConfigurationLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Adjusts Glue Configuration property.
+      FunctionName: GlueConfiguration
+      Handler: index.handler
+      Role: 
+        Fn::GetAtt: [GlueConfigurationRole, Arn]
+      Code:
+        ZipFile: |
+          const response = require("cfn-response");
+          const AWS = require("aws-sdk");
+          const glue = new AWS.Glue();
+          exports.handler = function (event, context) {
+            console.log("Request received:\n", JSON.stringify(event));
+            let physicalResourceId = event.ResourceProperties.CrawlerName;
+            const respond = (e) => response.send(event, context, e ? response.FAILED : response.SUCCESS, e ? e : {}, physicalResourceId);
+            process.on('uncaughtException', e=>respond(e));
+            try {
+              let configuration = (event.RequestType === 'Create' || event.RequestType === 'Update') ?
+                event.ResourceProperties.Configuration :
+                {};
+              if (configuration.Version) {
+                configuration.Version = parseFloat(configuration.Version);
+              }
+              glue.updateCrawler({
+                Name: physicalResourceId,
+                Configuration: JSON.stringify(configuration)
+              }).promise()
+                .then(data=>respond())
+                .catch(e=>respond(e));
+            } catch (e) { respond(e); }
+          };
+      Timeout: 30
+      Runtime: nodejs8.10
+
+  GlueConfigurationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal: {Service: [lambda.amazonaws.com]}
+          Action: ['sts:AssumeRole']
+      Path: /
+      ManagedPolicyArns:
+      - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+      Policies:
+      - PolicyName: GluePolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 'glue:UpdateCrawler'
+              Resource: '*'
+
+  CrawlerConfiguration:
+    Type: Custom::CrawlerConfiguration
+    Properties:
+      ServiceToken: 
+        Fn::GetAtt: [GlueConfigurationLambda, Arn]
+      CrawlerName: 
+        Ref: GlueCrawler
+      Configuration:
+        Version: '1.0'
+        CrawlerOutput:
+          Partitions:
+            AddOrUpdateBehavior: InheritFromTable
 Outputs:
   ApiUrl:
     Description: Url of your API endpoint
