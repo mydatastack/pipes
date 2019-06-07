@@ -37,6 +37,10 @@ Resources:
         Variables:
           DELIVERY_STREAM_SUCCESS:
             Ref: EventFirehose
+          REGION:
+            Fn::Sub: ${AWS::Region}
+          NODE_ENV:
+            Ref: Stage
       Policies:
         - Version: 2012-10-17
           Statement:
@@ -105,6 +109,8 @@ Resources:
   EventFirehose:
     Type: AWS::KinesisFirehose::DeliveryStream
     Properties:
+      DeliveryStreamName: 
+        Fn::Sub: ${Name}-firehose-${Stage} 
       S3DestinationConfiguration:
         BucketARN:
           Fn::GetAtt: [ DataBucket, Arn ]
@@ -112,7 +118,8 @@ Resources:
           IntervalInSeconds: 60
           SizeInMBs: 10
         CompressionFormat: GZIP
-        Prefix: events/
+        Prefix: "events/year=!{timestamp:YYYY}/month=!{timestamp:MM}/day=!{timestamp:dd}/hour=!{timestamp:HH}/"
+        ErrorOutputPrefix: "errors/!{firehose:random-string}/!{firehose:error-output-type}/!{timestamp:yyyy/MM/dd}/"
         RoleARN:
           Fn::GetAtt: [ KinesisRole, Arn ]
 
@@ -208,6 +215,89 @@ Resources:
       StageName: 
         Fn::Sub: ${Stage}
 
+  GlueDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId: 
+        Ref: AWS::AccountId
+      DatabaseInput:
+        Description: "The default database"
+        Name: 
+          Fn::Sub: "${Name}_${Stage}"
+
+  GlueCrawler:
+    Type: AWS::Glue::Crawler
+    Properties:
+      DatabaseName:
+        Ref: GlueDatabase
+      Description: "The default crawler"
+      Name: 
+        Fn::Sub: "pipes-${Stage}" 
+      Role:
+        Fn::GetAtt: [GlueCrawlerRole, Arn]
+      Schedule:
+        ScheduleExpression: "cron(0 * * * ? *)" 
+      Targets:
+        S3Targets:
+          - Path: 
+              Fn::Join:
+                - ""
+                - - Ref: DataBucket
+                  - "/events/"
+      SchemaChangePolicy:
+        UpdateBehavior: "UPDATE_IN_DATABASE"
+        DeleteBehavior: "LOG"
+
+  GlueCrawlerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              - glue.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: GlueCrawlerS3ObjectPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:PutObject
+                - s3:ListBucket
+                - s3:GetBucketLocation
+                - s3:GetBucketAcl
+              Resource:
+                - Fn::GetAtt: [DataBucket, Arn]
+                - Fn::Join:
+                    - ""
+                    - - Fn::GetAtt: [DataBucket, Arn] 
+                      - "/events*"
+        - PolicyName: GlueCrawlerCloudWatchPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup 
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource:
+                Fn::Sub: "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws-glue/*" 
+        - PolicyName: GlueCrawlerDatabasePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+                - "glue:*"
+              Resource: "*"
 Outputs:
   ApiUrl:
     Description: Url of your API endpoint

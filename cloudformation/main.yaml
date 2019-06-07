@@ -8,23 +8,14 @@ Parameters:
     Description: The name of the api
     MinLength: 3
     MaxLength: 30
-    Default: pipes-core-stack-local 
+    Default: pipes
   Stage:
     Type: String
     Description: The stage of the api
     MinLength: 3
     MaxLength: 20
-    Default: pre-dev
+    Default: local 
 
-Globals:
-  Function:
-    Runtime: nodejs10.x
-    Timeout: 20
-    MemorySize: 128
-    Environment:
-      Variables:
-        NODE_ENV:
-          Fn::Sub: ${Stage}
 Resources:
   APIGatewayNestedStack:
     Type: AWS::Serverless::Application
@@ -36,8 +27,3 @@ Resources:
         Stage:
           Ref: Stage
 
-Outputs:
-  TestFunctionArn:
-    Description: Printing out test function arn
-    Value: 
-      Fn::GetAtt [TestFunction, Arn]
