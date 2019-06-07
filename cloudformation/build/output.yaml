@@ -18,13 +18,9 @@ Resources:
   APIGatewayNestedStack:
     Type: AWS::Serverless::Application
     Properties:
-      Location: https://s3.amazonaws.com/us-east-1-pipes-cf-artifacts/3b9d42e90cab0601172f2d6951ead66c.template
+      Location: https://s3.amazonaws.com/us-east-1-pipes-cf-artifacts/43af0d1b2b34789f986fd0c8365c1d80.template
       Parameters:
         Name:
           Ref: Name
         Stage:
           Ref: Stage
-Outputs:
-  TestFunctionArn:
-    Description: Printing out test function arn
-    Value: Fn::GetAtt [TestFunction, Arn]
