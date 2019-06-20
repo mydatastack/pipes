@@ -1,26 +1,204 @@
-AWSTemplateFormatVersion: 2010-09-09
-Transform: AWS::Serverless-2016-10-31
-Description: Pipes infrastructure as code
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Google Analytics Duplicator
 Parameters:
   Name:
     Type: String
-    Description: The name of the api
-    MinLength: 3
-    MaxLength: 30
-    Default: pipes
+    Default: ga_collector
   Stage:
     Type: String
-    Description: The stage of the api
-    MinLength: 3
-    MaxLength: 20
-    Default: local
+    Default: dev
 Resources:
-  APIGatewayNestedStack:
-    Type: AWS::Serverless::Application
+  DataBucket:
+    Type: AWS::S3::Bucket
+  KinesisRole:
+    Type: AWS::IAM::Role
     Properties:
-      Location: https://s3.amazonaws.com/us-east-1-pipes-cf-artifacts/43af0d1b2b34789f986fd0c8365c1d80.template
-      Parameters:
-        Name:
-          Ref: Name
-        Stage:
-          Ref: Stage
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - firehose.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: KinesisRolePolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - s3:AbortMultipartUpload
+            - s3:GetBucketLocation
+            - s3:GetObject
+            - s3:ListBucket
+            - s3:ListBucketMultipartUploads
+            - s3:PutObject
+            Resource:
+            - Fn::GetAtt:
+              - DataBucket
+              - Arn
+            - Fn::Join:
+              - ''
+              - - Fn::GetAtt:
+                  - DataBucket
+                  - Arn
+                - /*
+  EventFirehose:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      S3DestinationConfiguration:
+        BucketARN:
+          Fn::GetAtt:
+          - DataBucket
+          - Arn
+        BufferingHints:
+          IntervalInSeconds: 60
+          SizeInMBs: 10
+        CompressionFormat: GZIP
+        Prefix: events/
+        RoleARN:
+          Fn::GetAtt:
+          - KinesisRole
+          - Arn
+  ApiGatewayRestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name:
+        Fn::Join:
+        - ''
+        - - Ref: AWS::StackName
+          - -api
+  GoogleAnalyticsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayRestApi
+      ParentId:
+        Fn::GetAtt:
+        - ApiGatewayRestApi
+        - RootResourceId
+      PathPart: com.google.analytics
+  GoogleAnalyticsVersion:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayRestApi
+      ParentId:
+        Ref: GoogleAnalyticsResource
+      PathPart: v1
+  ApiGatewayPostMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ResourceId:
+        Ref: GoogleAnalyticsVersion
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: POST
+      Integration:
+        Type: AWS
+        Credentials:
+          Fn::GetAtt:
+          - GatewayRole
+          - Arn
+        Uri:
+          Fn::Join:
+          - ''
+          - - 'arn:aws:apigateway:'
+            - Ref: AWS::Region
+            - :firehose:action/PutRecord
+        IntegrationHttpMethod: POST
+        RequestTemplates:
+          application/json:
+            Fn::Join:
+            - ''
+            - - '#set( $key = $context.identity.apiKey )
+
+                '
+              - '#set( $keyname = "apiKey" )
+
+                '
+              - '#set( $traceidval = $input.params().get("header").get("X-Amzn-Trace-Id"))'
+              - '#set( $bodyname = "body" )
+
+                '
+              - '#set( $traceid = "traceid")
+
+                '
+              - '#set( $body = $input.body )
+
+                '
+              - '#set( $quote = ''"'' )
+
+                '
+              - '#set( $b64 = $util.base64Encode("{$quote$keyname$quote:$quote$key$quote,$quote$traceid$quote:$quote$traceidval$quote,$quote$bodyname$quote:$quote$body$quote}")
+                )
+
+                '
+              - '{
+
+                '
+              - '"DeliveryStreamName": "'
+              - Ref: EventFirehose
+              - '",
+
+                '
+              - ' "Record": { "Data": "$b64" }
+
+                }'
+        RequestParameters:
+          integration.request.header.Content-Type: '''application/x-amz-json-1.1'''
+        IntegrationResponses:
+        - StatusCode: 200
+          ResponseTemplates:
+            application/json: '{"status":"OK"}'
+      MethodResponses:
+      - StatusCode: 200
+      RestApiId:
+        Ref: ApiGatewayRestApi
+  GatewayRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - apigateway.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: GatewayRolePolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - firehose:PutRecord
+            Resource: '*'
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+    - ApiGatewayPostMethod
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayRestApi
+      StageName:
+        Fn::Sub: ${Stage}
+Outputs:
+  ApiUrl:
+    Description: Url of your API endpoint
+    Value:
+      Fn::Join:
+      - ''
+      - - https://
+        - Ref: ApiGatewayRestApi
+        - .execute-api.
+        - Ref: AWS::Region
+        - .amazonaws.com/
+        - Fn::Sub: ${Stage}
+        - /
