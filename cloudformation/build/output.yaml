@@ -111,7 +111,7 @@ Resources:
             - :firehose:action/PutRecord
         IntegrationHttpMethod: POST
         RequestTemplates:
-          application/json:
+          text/plain:
             Fn::Join:
             - ''
             - - '#set( $key = $context.identity.apiKey )
