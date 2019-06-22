@@ -55,7 +55,8 @@ Resources:
           IntervalInSeconds: 60
           SizeInMBs: 10
         CompressionFormat: GZIP
-        Prefix: events/
+        Prefix: "events/year=!{timestamp:YYYY}/month=!{timestamp:MM}/day=!{timestamp:dd}/hour=!{timestamp:HH}/"
+        ErrorOutputPrefix: "errors/!{firehose:random-string}/!{firehose:error-output-type}/!{timestamp:yyyy/MM/dd}/"
         RoleARN:
           Fn::GetAtt: [ KinesisRole, Arn ]
 
@@ -114,23 +115,27 @@ Resources:
               - ":firehose:action/PutRecord" #this URI basically describes the service and action I want to invoke.
         IntegrationHttpMethod: POST #for kinesis using POST is required
         RequestTemplates:
-          text/plain: #now the mapping template for an incoming JSON
-            Fn::Join:
-              - ""
-              - - "#set( $key = $context.identity.apiKey )\n" #assign the API key to local variable
-                - "#set( $keyname = \"apiKey\" )\n"
-                - "#set( $traceidval = $input.params().get(\"header\").get(\"X-Amzn-Trace-Id\"))" #get the trace id to later extract a timestamp of the incoming request
-                - "#set( $bodyname = \"body\" )\n"
-                - "#set( $traceid = \"traceid\")\n"
-                - "#set( $body = $input.body )\n" #assign the request payload to variable
-                - "#set( $quote = '\"' )\n"
-                - "#set( $b64 = $util.base64Encode(\"{$quote$keyname$quote:$quote$key$quote,$quote$traceid$quote:$quote$traceidval$quote,$quote$bodyname$quote:$quote$body$quote}\") )\n"
-                #now encode the payload in base64 to form a valid Firehose request
-                - "{\n" #begin of the Firehose request json
-                - "\"DeliveryStreamName\": \""
-                - Ref: EventFirehose
-                - "\",\n"
-                - " \"Record\": { \"Data\": \"$b64\" }\n}" #end of the Firehose request json
+          text/plain: !Sub | 
+            #set( $key = "apiKey" )
+            #set( $key_val = $context.identity.apiKey )
+            #set( $trace_id_val = $input.params().get("header").get("X-Amzn-Trace-Id"))#set( $bodyname = "body" )
+            #set( $trace_id = "trace_id")
+            #set( $received_at_apig = "received_at_apig")
+            #set( $received_at_val = $context.requestTimeEpoch)
+            #set( $body = "body")
+            #set( $body_val = $input.body)
+            #set( $message_id = "message_id")
+            #set( $message_id_val = $context.requestId)
+            #set( $quote = '"' )
+            #set( $ip = "ip")
+            #set( $ip_val = "$context.identity.sourceIp)
+            #set( $user_agent = "user_agent")
+            #set( $user_agent_val = $context.identity.userAgent)
+            #set( $b64 = $util.base64Encode("{$quote$key$quote:$quote$key_val$quote,$quote$message_id$quote:$quote$message_id_val$quote,$quote$ip$quote:$quote$ip_val$quote,$quote$user_agent$quote:$quote$user_agent$quote,$quote$trace_id$quote:$quote$trace_id_val$quote,$quote$received_at$quote:$quote$received_at_val$quote,$quote$body$quote:$body_val}"))
+            {
+             "DeliveryStreamName": "${EventFirehose}", 
+             "Record": {"Data": "$b64"}
+            }
         RequestParameters: #Firehose requires the content type to not be json, but amz-json
           integration.request.header.Content-Type: "'application/x-amz-json-1.1'"
         IntegrationResponses:

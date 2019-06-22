@@ -2,13 +2,17 @@ import base64
 import json
 import ast
 from urllib.parse import parse_qsl
+import datetime
 
+    
 def destructure(data):
     entry = ast.literal_eval(data.decode('utf-8'))
+    entrydict = dict(entry)
     body = entry['body']
     parsed = parse_qsl(body)
-    bodydict = dict(parsed)
-    return bodydict
+    bodydict = {'body': dict(parsed)}
+    final = {**entrydict, **bodydict, 'received_at_frh': datetime.datetime.now().isoformat() }
+    return final
 
 def main(event, ctx):
     rs = event['records']
