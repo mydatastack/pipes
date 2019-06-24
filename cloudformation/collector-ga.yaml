@@ -59,7 +59,7 @@ Resources:
                   - Fn::Join:
                     - ""
                     - - Fn::GetAtt: [ FirehoseProcessorFunction , Arn ]
-                      - ":*"
+                      - ":$LATEST"
 
   FirehoseProcessorFunction:
     Type: AWS::Serverless::Function
