@@ -1,4 +1,4 @@
-TEMPLATES=main api-gateway-collector google-analytics-collector
+TEMPLATES=main collector-pipes-apig collector-ga
 
 # Google Duplicator Deplyoment Variables
 GA_STACK_FILE=google-analytics-collector.yaml
