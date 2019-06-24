@@ -50,7 +50,7 @@ Resources:
                 - - Fn::GetAtt: [ DataBucket , Arn ]
                   - "/*"
       Roles:
-        Ref: KinesisFirehoseRole
+        - Ref: KinesisFirehoseRole
 
   InvokeLambdaPolicy:
     Type: AWS::IAM::Policy
@@ -65,7 +65,7 @@ Resources:
             Resource:
               Fn::GetAtt: [FirehoseProcessorFunction, Arn]
       Roles:
-        Ref: KinesisFirehoseRole
+        - Ref: KinesisFirehoseRole
 
   FirehoseProcessorFunction:
     Type: AWS::Serverless::Function
