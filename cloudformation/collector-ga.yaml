@@ -27,39 +27,45 @@ Resources:
             - firehose.amazonaws.com
           Action:
           - sts:AssumeRole
-      Path: "/"
-      Policies:
-        - PolicyName: KinesisFirehoseS3RolePolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - s3:AbortMultipartUpload
-                  - s3:GetBucketLocation
-                  - s3:GetObject
-                  - s3:ListBucket
-                  - s3:ListBucketMultipartUploads
-                  - s3:PutObject
-                Resource:
-                  - Fn::GetAtt: [ DataBucket , Arn ]
-                  - Fn::Join:
-                    - ""
-                    - - Fn::GetAtt: [ DataBucket , Arn ]
-                      - "/*"
-        - PolicyName: KinesisFirehoseLambdaRolePolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - lambda:InvokeFunction
-                  - lambda:GetFunctionConfiguration
-                Resource:
-                  - Fn::Join:
-                    - ""
-                    - - Fn::GetAtt: [ FirehoseProcessorFunction , Arn ]
-                      - ":$LATEST"
+
+  S3DeliveryPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: firehose_s3delivery_policy
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:AbortMultipartUpload
+              - s3:GetBucketLocation
+              - s3:GetObject
+              - s3:ListBucket
+              - s3:ListBucketMultipartUploads
+              - s3:PutObject
+            Resource:
+              - Fn::GetAtt: [ DataBucket , Arn ]
+              - Fn::Join:
+                - ""
+                - - Fn::GetAtt: [ DataBucket , Arn ]
+                  - "/*"
+      Roles:
+        Ref: KinesisFirehoseRole
+
+  InvokeLambdaPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: firehose_lambda_policy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - lambda:InvokeFunction
+            Resource:
+              Fn::GetAtt: [FirehoseProcessorFunction, Arn]
+      Roles:
+        Ref: KinesisFirehoseRole
 
   FirehoseProcessorFunction:
     Type: AWS::Serverless::Function
