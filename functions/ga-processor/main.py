@@ -14,7 +14,7 @@ def destructure(data):
     final = {**entrydict, **bodydict, 'received_at_frh': datetime.datetime.now().isoformat() }
     return final
 
-def main(event, ctx):
+def handler(event, ctx):
     rs = event['records']
     decoded_data = map(lambda x: {
         'recordId': x['recordId'],

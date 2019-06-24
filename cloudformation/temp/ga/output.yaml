@@ -1,4 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
 Description: Google Analytics Duplicator
 Parameters:
   Name:
@@ -10,7 +11,7 @@ Parameters:
 Resources:
   DataBucket:
     Type: AWS::S3::Bucket
-  KinesisRole:
+  KinesisFirehoseRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -24,7 +25,7 @@ Resources:
           - sts:AssumeRole
       Path: /
       Policies:
-      - PolicyName: KinesisRolePolicy
+      - PolicyName: KinesisFirehoseS3RolePolicy
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
@@ -46,10 +47,34 @@ Resources:
                   - DataBucket
                   - Arn
                 - /*
+      - PolicyName: KinesisFirehoseLambdaRolePolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - lambda:InvokeFunction
+            - lambda:GetFunctionConfiguration
+            Resource:
+            - Fn::Join:
+              - ''
+              - - Fn::GetAtt:
+                  - FirehoseProcessorFunction
+                  - Arn
+                - :*
+  FirehoseProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Runtime: python3.7
+      MemorySize: 128
+      Timeout: 60
+      ReservedConcurrentExecutions: 1
+      Handler: main.handler
+      CodeUri: s3://us-east-1-pipes-cf-artifacts/50dc5677d4e2ac583ae14eb867107c2a
   EventFirehose:
     Type: AWS::KinesisFirehose::DeliveryStream
     Properties:
-      S3DestinationConfiguration:
+      ExtendedS3DestinationConfiguration:
         BucketARN:
           Fn::GetAtt:
           - DataBucket
@@ -57,12 +82,23 @@ Resources:
         BufferingHints:
           IntervalInSeconds: 60
           SizeInMBs: 10
-        CompressionFormat: GZIP
-        Prefix: events/
+        CompressionFormat: UNCOMPRESSED
+        Prefix: events/year=!{timestamp:YYYY}/month=!{timestamp:MM}/day=!{timestamp:dd}/hour=!{timestamp:HH}/
+        ErrorOutputPrefix: errors/!{firehose:random-string}/!{firehose:error-output-type}/!{timestamp:yyyy/MM/dd}/
         RoleARN:
           Fn::GetAtt:
-          - KinesisRole
+          - KinesisFirehoseRole
           - Arn
+        ProcessingConfiguration:
+          Enabled: true
+          Processors:
+          - Parameters:
+            - ParameterName: LambdaArn
+              ParameterValue:
+                Fn::GetAtt:
+                - FirehoseProcessorFunction
+                - Arn
+            Type: Lambda
   ApiGatewayRestApi:
     Type: AWS::ApiGateway::RestApi
     Properties:
@@ -112,42 +148,19 @@ Resources:
         IntegrationHttpMethod: POST
         RequestTemplates:
           text/plain:
-            Fn::Join:
-            - ''
-            - - '#set( $key = $context.identity.apiKey )
-
-                '
-              - '#set( $keyname = "apiKey" )
-
-                '
-              - '#set( $traceidval = $input.params().get("header").get("X-Amzn-Trace-Id"))'
-              - '#set( $bodyname = "body" )
-
-                '
-              - '#set( $traceid = "traceid")
-
-                '
-              - '#set( $body = $input.body )
-
-                '
-              - '#set( $quote = ''"'' )
-
-                '
-              - '#set( $b64 = $util.base64Encode("{$quote$keyname$quote:$quote$key$quote,$quote$traceid$quote:$quote$traceidval$quote,$quote$bodyname$quote:$quote$body$quote}")
-                )
-
-                '
-              - '{
-
-                '
-              - '"DeliveryStreamName": "'
-              - Ref: EventFirehose
-              - '",
-
-                '
-              - ' "Record": { "Data": "$b64" }
-
-                }'
+            Fn::Sub: "#set( $data_source = \"data_source\")\n#set( $data_source_val\
+              \ = \"ga_v1\")\n#set( $key = \"api_key\" )\n#set( $key_ = $context.identity.apiKey\
+              \ )\n#set( $trace_id_val = $input.params().get(\"header\").get(\"X-Amzn-Trace-Id\"\
+              ))#set( $bodyname = \"body\" )\n#set( $trace_id = \"trace_id\")\n#set(\
+              \ $received_at_apig = \"received_at_apig\")\n#set( $received_at_apig_val\
+              \ = $context.requestTimeEpoch)\n#set( $body = \"body\")\n#set( $body_val\
+              \ = $input.body)\n#set( $message_id = \"message_id\")\n#set( $message_id_val\
+              \ = $context.requestId)\n#set( $ip = \"ip\")\n#set( $ip_val = $context.identity.sourceIp)\n\
+              #set( $user_agent = \"user_agent\")\n#set( $user_agent_val = $context.identity.userAgent)\n\
+              #set( $quote = '\"' )\n#set( $b64 = $util.base64Encode(\"{$quote$data_source$quote:$quote$data_source_val$quote,$quote$key$quote:$quote$key_val$quote,$quote$message_id$quote:$quote$message_id_val$quote,$quote$trace_id$quote:$quote$trace_id_val$quote,$quote$received_at_apig$quote:$quote$received_at_apig_val$quote,$quote$ip$quote:$quote$ip_val$quote,\
+              \ $quote$user_agent$quote:$quote$user_agent_val$quote,$quote$body$quote:$quote$body_val$quote}\"\
+              ))\n{\n \"DeliveryStreamName\": \"${EventFirehose}\", \n \"Record\"\
+              : {\"Data\": \"$b64\"}\n}\n"
         RequestParameters:
           integration.request.header.Content-Type: '''application/x-amz-json-1.1'''
         IntegrationResponses:
@@ -190,8 +203,8 @@ Resources:
       StageName:
         Fn::Sub: ${Stage}
 Outputs:
-  ApiUrl:
-    Description: Url of your API endpoint
+  CollectorEndpoint:
+    Description: URL of the endpoint that should be used with Google Analytics Duplicator
     Value:
       Fn::Join:
       - ''

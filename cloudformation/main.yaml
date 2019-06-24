@@ -20,16 +20,16 @@ Resources:
   APIGatewayCollectorStack:
     Type: AWS::Serverless::Application
     Properties:
-      Location: ./api-gateway-collector.yaml
+      Location: ./collector-pipes-apig.yaml
       Parameters:
         Name:
           Ref: Name
         Stage:
           Ref: Stage
-  GoogleAnalyticsDuplicatorStack:
+  GoogleAnalyticsCollectorStack:
     Type: AWS::Serverless::Application
     Properties:
-      Location: ./google-analytics-collector.yaml
+      Location: ./collector-ga.yaml
       Parameters:
         Name:
           Ref: Name
