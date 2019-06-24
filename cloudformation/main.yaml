@@ -17,13 +17,21 @@ Parameters:
     Default: local 
 
 Resources:
-  APIGatewayNestedStack:
+  APIGatewayCollectorStack:
     Type: AWS::Serverless::Application
     Properties:
-      Location: ./apig-data-stream.yaml
+      Location: ./collector-pipes-apig.yaml
       Parameters:
         Name:
           Ref: Name
         Stage:
           Ref: Stage
-
+  GoogleAnalyticsCollectorStack:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./collector-ga.yaml
+      Parameters:
+        Name:
+          Ref: Name
+        Stage:
+          Ref: Stage
