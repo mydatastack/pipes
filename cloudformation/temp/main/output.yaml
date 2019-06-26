@@ -1,7 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 Transform: AWS::Serverless-2016-10-31
 Description: Pipes infrastructure as code
-
 Parameters:
   Name:
     Type: String
@@ -14,36 +13,35 @@ Parameters:
     Description: The stage of the api
     MinLength: 3
     MaxLength: 20
-    Default: local 
+    Default: local
   AdminEmail:
     Type: String
     Description: An email of the person that should be notified in case data is missing
     Default: dimitri+pipes@tarasowski.de
   S3AlarmPeriod:
     Type: String
-    Description: Provide a time value in seconds when the alarm should trigger when new data is missing in S3
+    Description: Provide a time value in seconds when the alarm should trigger when
+      new data is missing in S3
     Default: 60
   GoogleAnalyticsExportStackName:
     Type: String
-    Description: Since in GA stack some resources needs to be exported a hard-coded stack name needs to be defined
+    Description: Since in GA stack some resources needs to be exported a hard-coded
+      stack name needs to be defined
     Default: google-analytics-export-stack-name
-
 Resources:
-
   APIGatewayCollectorStack:
     Type: AWS::Serverless::Application
     Properties:
-      Location: ./collector-pipes-apig.yaml
+      Location: https://s3.eu-central-1.amazonaws.com/pipes-cf-artifacts/1e24318db752a729209e9851c2b6b62a.template
       Parameters:
         Name:
           Ref: Name
         Stage:
           Ref: Stage
-
   GoogleAnalyticsCollectorStack:
     Type: AWS::Serverless::Application
     Properties:
-      Location: ./collector-ga.yaml
+      Location: https://s3.eu-central-1.amazonaws.com/pipes-cf-artifacts/48aab376175e084c7cdcdeff99d79037.template
       Parameters:
         Name:
           Ref: Name
@@ -51,14 +49,13 @@ Resources:
           Ref: Stage
         GoogleAnalyticsExportStackName:
           Ref: GoogleAnalyticsExportStackName
-
   MonitoringStack:
     Type: AWS::Serverless::Application
     DependsOn:
-      - APIGatewayCollectorStack
-      - GoogleAnalyticsCollectorStack
+    - APIGatewayCollectorStack
+    - GoogleAnalyticsCollectorStack
     Properties:
-      Location: ./monitoring.yaml
+      Location: https://s3.eu-central-1.amazonaws.com/pipes-cf-artifacts/f5196ea12b66d737b27e79a5239d92ae.template
       Parameters:
         Name:
           Ref: Name

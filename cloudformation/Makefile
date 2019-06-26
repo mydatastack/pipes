@@ -1,9 +1,14 @@
-TEMPLATES=main collector-pipes-apig collector-ga
+TEMPLATES=main collector-pipes-apig collector-ga monitoring
 
 # Google Duplicator Deplyoment Variables
 GA_STACK_FILE=google-analytics-collector.yaml
-BUCKET=us-east-1-pipes-cf-artifacts
+MONITORING_TEMPLAE=monitoring.yaml
+BUCKET=pipes-cf-artifacts
 GA_STACKNAME=tarasowski-pipes-dev-machine
+MONITORING_STACKNAME=monitoring-pipes-dev-machine
+MAIN_TEMPLATE=main.yaml
+MAIN_STACKNAME=tarasowski-main-dev-machine
+REGION=eu-central-1
 #-----
 
 validate:
@@ -17,5 +22,25 @@ ga_deploy: validate
 		 mkdir -p temp/ga; \
 	fi
 	@rm -rf temp/ga && mkdir -p temp/ga
-	@aws cloudformation package --template-file $(GA_STACK_FILE) --output-template-file temp/ga/output.yaml --s3-bucket $(BUCKET) --region us-east-1
-	@aws cloudformation deploy --template-file temp/ga/output.yaml --stack-name $(GA_STACKNAME) --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --region us-east-1
+	@aws cloudformation package --template-file $(GA_STACK_FILE) --output-template-file temp/ga/output.yaml --s3-bucket $(BUCKET) --region eu-central-1
+	@aws cloudformation deploy --template-file temp/ga/output.yaml --stack-name $(GA_STACKNAME) --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --region eu-central-1
+
+mon_deploy: validate
+	@if [ ! -d 'temp/monitoring' ]; then \
+		 mkdir -p temp/monitoring; \
+	fi
+	@rm -rf temp/monitoring && mkdir -p temp/monitoring
+	@aws cloudformation package --template-file $(MONITORING_TEMPLAE) --output-template-file temp/monitoring/output.yaml --s3-bucket $(BUCKET) --region eu-central-1
+	@aws cloudformation deploy --template-file temp/monitoring/output.yaml --stack-name $(MONITORING_STACKNAME) --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --region eu-central-1
+
+create_bucket:
+	aws s3api create-bucket --bucket $(BUCKET) --region eu-central-1 --create-bucket-configuration LocationConstraint=eu-central-1
+
+main_deploy: validate
+	@if [ ! -d 'temp/main' ]; then \
+		 mkdir -p temp/main; \
+	fi
+	@rm -rf temp/main && mkdir -p temp/main
+	@aws cloudformation package --template-file $(MAIN_TEMPLATE) --output-template-file temp/main/output.yaml --s3-bucket $(BUCKET) --region eu-central-1
+	@aws cloudformation deploy --template-file temp/main/output.yaml --stack-name $(MAIN_STACKNAME) --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --region eu-central-1
+

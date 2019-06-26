@@ -9,6 +9,9 @@ Parameters:
   Stage:
     Type: String
     Default: dev
+  GoogleAnalyticsExportStackName:
+    Type: String
+    Default: google-analytics-export-stack-name
 
 Resources:
 
@@ -233,3 +236,11 @@ Outputs:
           - '.amazonaws.com/'
           - Fn::Sub: ${Stage} 
           - "/"
+  GADataBucket:
+    Description: Reference to the Google Analytics Data Bucket
+    Value:
+      Ref: DataBucket
+    Export:
+      Name:
+        Fn::Sub: "${GoogleAnalyticsExportStackName}-GADataBucket"
+

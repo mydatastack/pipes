@@ -303,7 +303,8 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Description: Adjusts Glue Configuration property.
-      FunctionName: GlueConfiguration
+      FunctionName: 
+        Fn::Sub: "${Name}-glue-configuration-${Stage}"
       Handler: index.handler
       Role: 
         Fn::GetAtt: [GlueConfigurationRole, Arn]
