@@ -23,39 +23,14 @@ Parameters:
     Type: String
     Description: Provide a time value in seconds when the alarm should trigger when new data is missing in S3
     Default: 60
-  MonitoringEmitMetricsFunction:
-    Type: String
-    Description: A default name for the export function name. This name is used in other templates for linking
-    Default: monitoring-emit-metrics-function
 
 Resources:
-
-  APIGatewayCollectorStack:
+  TestStack:
     DependsOn:
       - MonitoringStack
     Type: AWS::Serverless::Application
     Properties:
-      Location: ./collector-pipes-apig.yaml
-      Parameters:
-        Name:
-          Ref: Name
-        Stage:
-          Ref: Stage
-
-  GoogleAnalyticsCollectorStack:
-    DependsOn:
-      - MonitoringStack
-    Type: AWS::Serverless::Application
-    Properties:
-      Location: ./collector-ga.yaml
-      Parameters:
-        Name:
-          Ref: Name
-        Stage:
-          Ref: Stage
-        MonitoringEmitMetricsFunction:
-          Ref: MonitoringEmitMetricsFunction
-
+      Location: ./test.yaml
   MonitoringStack:
     Type: AWS::Serverless::Application
     Properties:
@@ -69,5 +44,3 @@ Resources:
           Ref: AdminEmail
         S3AlarmPeriod:
           Ref: S3AlarmPeriod
-        MonitoringEmitMetricsFunction:
-          Ref: MonitoringEmitMetricsFunction

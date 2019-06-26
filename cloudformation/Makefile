@@ -44,3 +44,10 @@ main_deploy: validate
 	@aws cloudformation package --template-file $(MAIN_TEMPLATE) --output-template-file temp/main/output.yaml --s3-bucket $(BUCKET) --region eu-central-1
 	@aws cloudformation deploy --template-file temp/main/output.yaml --stack-name $(MAIN_STACKNAME) --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --region eu-central-1
 
+test_deploy: 
+	@if [ ! -d 'temp/test' ]; then \
+		 mkdir -p temp/test; \
+	fi
+	@rm -rf temp/test && mkdir -p temp/test
+	@aws cloudformation package --template-file test-main.yaml --output-template-file temp/test/output.yaml --s3-bucket $(BUCKET) --region eu-central-1
+	@aws cloudformation deploy --template-file temp/test/output.yaml --stack-name tarasowski-test --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --region eu-central-1

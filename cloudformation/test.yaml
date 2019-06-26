@@ -1,0 +1,46 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: Pipes infrastructure as code
+
+Parameters:
+  BucketName:
+    Type: String
+    Default: test-monitoring-pipes
+  MonitoringEmitMetricsFunction:
+    Type: String
+    Default: monitoring-emit-metrics-function
+
+Resources:
+
+  DataBucket:
+    DependsOn:
+      - BucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Ref: BucketName
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: 's3:ObjectCreated:*'
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: events/
+            Function:
+              Fn::ImportValue: "TestFunction-Alarm"
+
+  BucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName:
+        Fn::ImportValue: 
+          Fn::Join:
+            - ""
+            - - Fn::Sub: "{MonitoringEmitMetricsFunction}-${Name}-${Stage}-Name"
+      Principal: s3.amazonaws.com
+      SourceAccount: 
+        Ref: AWS::AccountId
+      SourceArn:
+        Fn::Sub: "arn:aws:s3:::*"

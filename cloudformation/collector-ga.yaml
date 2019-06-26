@@ -12,8 +12,44 @@ Parameters:
   GoogleAnalyticsExportStackName:
     Type: String
     Default: google-analytics-export-stack-name
+  MonitoringEmitMetricsFunction:
+    Type: String
+    Default: monitoring-emit-metrics-function
 
 Resources:
+
+  DataBucket:
+    DependsOn:
+      - BucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: 's3:ObjectCreated:*'
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: events/
+            Function:
+              Fn::ImportValue: 
+                Fn::Sub: 
+                  - "{MonitoringEmitMetricsFunction}-${Name}-${Stage}-Arn"
+
+  BucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName:
+        Fn::ImportValue:
+          Fn::Join:
+            - ""
+            - - Fn::Sub: "{MonitoringEmitMetricsFunction}-${Name}-${Stage}-Name"
+      Principal: s3.amazonaws.com
+      SourceAccount: 
+        Ref: AWS::AccountId
+      SourceArn:
+        Fn::Sub: "arn:aws:s3:::*"
 
   DataBucket:
     Type: AWS::S3::Bucket
