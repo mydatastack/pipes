@@ -1,0 +1,85 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: Pipes infrastructure as code
+
+Parameters:
+  BucketName:
+    Type: String
+    Default: test-monitoring-pipes
+  MonitoringEmitMetricsFunction:
+    Type: String
+    Default: monitoring-emit-metrics-function
+
+Resources:
+
+  DataBucket:
+    DependsOn:
+      - BucketPermission
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Ref: BucketName
+      NotificationConfiguration:
+        TopicConfigurations:
+          - Event: 's3:ObjectCreated:*'
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: events/
+            Topic:
+              Ref: BucketEventsTopic
+              
+  BucketEventsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: 's3bucket-metrics-sns'
+      TopicName: 's3bucket-metrics-sns'
+
+  BucketPermission:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      PolicyDocument:
+        Id: BucketTopicPolicy
+        Version: 2012-10-17
+        Statement:
+          - Sid: 304459-statement
+            Effect: Allow
+            Action: 
+              - sns:Publish
+            Resource:
+              Ref: BucketEventsTopic
+            Principal: 
+              Service: 's3.amazonaws.com'
+      Topics:
+        - Ref: BucketEventsTopic
+
+  EmitMetricsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: "test-tarasowski-emitting-metrics"
+      Handler: test.handler
+      Runtime: python3.7
+      Timeout: 5
+      MemorySize: 128
+      CodeUri: ../functions/monitoring/s3
+
+  EmitMetricsFunctionSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint:
+        Fn::GetAtt: [EmitMetricsFunction, Arn]
+      TopicArn:
+        Ref: BucketEventsTopic
+      Protocol: lambda
+
+  LambdaInvokePermissions:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      Principal: 'sns.amazonaws.com'
+      SourceArn: 
+        Ref: BucketEventsTopic
+      FunctionName:
+        Fn::GetAtt: [EmitMetricsFunction, Arn]

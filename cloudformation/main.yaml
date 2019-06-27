@@ -17,22 +17,20 @@ Parameters:
     Default: local 
   AdminEmail:
     Type: String
-    Description: An email of the person that should be notified in case data is missing
+    Description: An email of the person that should be notified in case missing data 
     Default: dimitri+pipes@tarasowski.de
+  FallbackEmail:
+    Type: String
+    Description: An email of the person that should be notified in case of missing data
+    Default: dimitri+pipes2@tarasowski.de
   S3AlarmPeriod:
     Type: String
     Description: Provide a time value in seconds when the alarm should trigger when new data is missing in S3
     Default: 60
-  MonitoringEmitMetricsFunction:
-    Type: String
-    Description: A default name for the export function name. This name is used in other templates for linking
-    Default: monitoring-emit-metrics-function
 
 Resources:
 
   APIGatewayCollectorStack:
-    DependsOn:
-      - MonitoringStack
     Type: AWS::Serverless::Application
     Properties:
       Location: ./collector-pipes-apig.yaml
@@ -41,10 +39,14 @@ Resources:
           Ref: Name
         Stage:
           Ref: Stage
+        AdminEmail:
+          Ref: AdminEmail
+        FallbackEmail:
+          Ref: FallbackEmail
+        S3AlarmPeriod:
+          Ref: S3AlarmPeriod
 
   GoogleAnalyticsCollectorStack:
-    DependsOn:
-      - MonitoringStack
     Type: AWS::Serverless::Application
     Properties:
       Location: ./collector-ga.yaml
@@ -53,21 +55,9 @@ Resources:
           Ref: Name
         Stage:
           Ref: Stage
-        MonitoringEmitMetricsFunction:
-          Ref: MonitoringEmitMetricsFunction
-
-  MonitoringStack:
-    Type: AWS::Serverless::Application
-    Properties:
-      Location: ./monitoring.yaml
-      Parameters:
-        Name:
-          Ref: Name
-        Stage:
-          Ref: Stage
         AdminEmail:
           Ref: AdminEmail
+        FallbackEmail:
+          Ref: FallbackEmail
         S3AlarmPeriod:
           Ref: S3AlarmPeriod
-        MonitoringEmitMetricsFunction:
-          Ref: MonitoringEmitMetricsFunction

@@ -9,12 +9,15 @@ Parameters:
   Stage:
     Type: String
     Default: dev
-  GoogleAnalyticsExportStackName:
+  AdminEmail:
     Type: String
-    Default: google-analytics-export-stack-name
-  MonitoringEmitMetricsFunction:
+    Default: dimitri+pipes@tarasowski.de
+  FallbackEmail:
     Type: String
-    Default: monitoring-emit-metrics-function
+    Default: dimitri+pipes2@tarasowski.de
+  S3AlarmPeriod:
+    Type: String
+    Default: 60
 
 Resources:
 
@@ -24,35 +27,36 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       NotificationConfiguration:
-        LambdaConfigurations:
+        TopicConfigurations:
           - Event: 's3:ObjectCreated:*'
             Filter:
               S3Key:
                 Rules:
                   - Name: prefix
                     Value: events/
-            Function:
-              Fn::ImportValue: 
-                Fn::Sub: 
-                  - "{MonitoringEmitMetricsFunction}-${Name}-${Stage}-Arn"
-
+            Topic:
+              Ref: BucketEventsTopic
+              
   BucketPermission:
-    Type: AWS::Lambda::Permission
+    Type: AWS::SNS::TopicPolicy
     Properties:
-      Action: 'lambda:InvokeFunction'
-      FunctionName:
-        Fn::ImportValue:
-          Fn::Join:
-            - ""
-            - - Fn::Sub: "{MonitoringEmitMetricsFunction}-${Name}-${Stage}-Name"
-      Principal: s3.amazonaws.com
-      SourceAccount: 
-        Ref: AWS::AccountId
-      SourceArn:
-        Fn::Sub: "arn:aws:s3:::*"
+      PolicyDocument:
+        Id: BucketTopicPolicyGA
+        Version: 2012-10-17
+        Statement:
+          - Sid: GA001 
+            Effect: Allow
+            Action: 
+              - sns:Publish
+            Resource:
+              Ref: BucketEventsTopic
+            Principal: 
+              Service: 's3.amazonaws.com'
+      Topics:
+        - Ref: BucketEventsTopic
 
-  DataBucket:
-    Type: AWS::S3::Bucket
+  BucketEventsTopic:
+    Type: AWS::SNS::Topic
 
   KinesisFirehoseRole:
     Type: AWS::IAM::Role
@@ -259,6 +263,23 @@ Resources:
       StageName: 
         Fn::Sub: ${Stage}
 
+  GoogleAnalyticsCollectorMonitoring:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./collector-ga-monitoring.yaml
+      Parameters:
+        Name:
+          Ref: Name
+        Stage:
+          Ref: Stage
+        AdminEmail:
+          Ref: AdminEmail
+        FallbackEmail:
+          Ref: FallbackEmail
+        S3AlarmPeriod:
+          Ref: S3AlarmPeriod
+        BucketEventsTopic:
+          Ref: BucketEventsTopic
 Outputs:
   CollectorEndpoint:
     Description: URL of the endpoint that should be used with Google Analytics Duplicator 
@@ -272,11 +293,4 @@ Outputs:
           - '.amazonaws.com/'
           - Fn::Sub: ${Stage} 
           - "/"
-  GADataBucket:
-    Description: Reference to the Google Analytics Data Bucket
-    Value:
-      Ref: DataBucket
-    Export:
-      Name:
-        Fn::Sub: "${GoogleAnalyticsExportStackName}-GADataBucket"
 

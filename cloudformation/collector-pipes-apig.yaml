@@ -7,15 +7,21 @@ Parameters:
     Type: String
   Stage:
     Type: String
+  AdminEmail:
+    Type: String
+    Default: dimitri+pipes@tarasowski.de
+  FallbackEmail:
+    Type: String
+    Default: dimitri+pipes2@tarasowski.de
+  S3AlarmPeriod:
+    Type: String
+    Default: 60
 
 Resources:
 
   DataBucket:
     Type: AWS::S3::Bucket
-    Properties:
-      BucketName:
-        Fn::Sub: ${Name}-data-lake-${Stage}
-
+  
   EventStream:
     Type: AWS::Kinesis::Stream
     Properties:
@@ -302,9 +308,6 @@ Resources:
   GlueConfigurationLambda:
     Type: AWS::Lambda::Function
     Properties:
-      Description: Adjusts Glue Configuration property.
-      FunctionName: 
-        Fn::Sub: "${Name}-glue-configuration-${Stage}"
       Handler: index.handler
       Role: 
         Fn::GetAtt: [GlueConfigurationRole, Arn]

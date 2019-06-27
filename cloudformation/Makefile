@@ -1,4 +1,4 @@
-TEMPLATES=main collector-pipes-apig collector-ga monitoring
+TEMPLATES=main collector-pipes-apig collector-ga collector-ga-monitoring 
 
 # Google Duplicator Deplyoment Variables
 GA_STACK_FILE=google-analytics-collector.yaml

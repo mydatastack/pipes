@@ -16,47 +16,23 @@ Parameters:
     Default: local
   AdminEmail:
     Type: String
-    Description: An email of the person that should be notified in case data is missing
+    Description: An email of the person that should be notified in case missing data
     Default: dimitri+pipes@tarasowski.de
+  FallbackEmail:
+    Type: String
+    Description: An email of the person that should be notified in case of missing
+      data
+    Default: dimitri+pipes2@tarasowski.de
   S3AlarmPeriod:
     Type: String
     Description: Provide a time value in seconds when the alarm should trigger when
       new data is missing in S3
     Default: 60
-  MonitoringEmitMetricsFunction:
-    Type: String
-    Description: A default name for the export function name. This name is used in
-      other templates for linking
-    Default: monitoring-emit-metrics-function
 Resources:
   APIGatewayCollectorStack:
-    DependsOn:
-    - MonitoringStack
     Type: AWS::Serverless::Application
     Properties:
-      Location: https://s3.eu-central-1.amazonaws.com/pipes-cf-artifacts/1e24318db752a729209e9851c2b6b62a.template
-      Parameters:
-        Name:
-          Ref: Name
-        Stage:
-          Ref: Stage
-  GoogleAnalyticsCollectorStack:
-    DependsOn:
-    - MonitoringStack
-    Type: AWS::Serverless::Application
-    Properties:
-      Location: https://s3.eu-central-1.amazonaws.com/pipes-cf-artifacts/1f896d561b2f5355c99b9e9fde060e63.template
-      Parameters:
-        Name:
-          Ref: Name
-        Stage:
-          Ref: Stage
-        MonitoringEmitMetricsFunction:
-          Ref: MonitoringEmitMetricsFunction
-  MonitoringStack:
-    Type: AWS::Serverless::Application
-    Properties:
-      Location: https://s3.eu-central-1.amazonaws.com/pipes-cf-artifacts/989ef837f98550b2f0e1fc10b6783b37.template
+      Location: https://s3.eu-central-1.amazonaws.com/pipes-cf-artifacts/1b897432f4686eb8fac49d280edaaf7b.template
       Parameters:
         Name:
           Ref: Name
@@ -64,7 +40,22 @@ Resources:
           Ref: Stage
         AdminEmail:
           Ref: AdminEmail
+        FallbackEmail:
+          Ref: FallbackEmail
         S3AlarmPeriod:
           Ref: S3AlarmPeriod
-        MonitoringEmitMetricsFunction:
-          Ref: MonitoringEmitMetricsFunction
+  GoogleAnalyticsCollectorStack:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: https://s3.eu-central-1.amazonaws.com/pipes-cf-artifacts/7a61c98ab22aaa689c3c49149ee08e09.template
+      Parameters:
+        Name:
+          Ref: Name
+        Stage:
+          Ref: Stage
+        AdminEmail:
+          Ref: AdminEmail
+        FallbackEmail:
+          Ref: FallbackEmail
+        S3AlarmPeriod:
+          Ref: S3AlarmPeriod

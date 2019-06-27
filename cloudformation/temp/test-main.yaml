@@ -26,21 +26,6 @@ Parameters:
 
 Resources:
   TestStack:
-    DependsOn:
-      - MonitoringStack
     Type: AWS::Serverless::Application
     Properties:
-      Location: ./test.yaml
-  MonitoringStack:
-    Type: AWS::Serverless::Application
-    Properties:
-      Location: ./monitoring.yaml
-      Parameters:
-        Name:
-          Ref: Name
-        Stage:
-          Ref: Stage
-        AdminEmail:
-          Ref: AdminEmail
-        S3AlarmPeriod:
-          Ref: S3AlarmPeriod
+      Location: ./test-bucket.yaml

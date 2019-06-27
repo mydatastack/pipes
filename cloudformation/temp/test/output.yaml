@@ -25,21 +25,6 @@ Parameters:
     Default: 60
 Resources:
   TestStack:
-    DependsOn:
-    - MonitoringStack
     Type: AWS::Serverless::Application
     Properties:
-      Location: https://s3.eu-central-1.amazonaws.com/pipes-cf-artifacts/c138551a70dba66e354f56cdf1df5b3c.template
-  MonitoringStack:
-    Type: AWS::Serverless::Application
-    Properties:
-      Location: https://s3.eu-central-1.amazonaws.com/pipes-cf-artifacts/989ef837f98550b2f0e1fc10b6783b37.template
-      Parameters:
-        Name:
-          Ref: Name
-        Stage:
-          Ref: Stage
-        AdminEmail:
-          Ref: AdminEmail
-        S3AlarmPeriod:
-          Ref: S3AlarmPeriod
+      Location: https://s3.eu-central-1.amazonaws.com/pipes-cf-artifacts/d0c18cf2ad9d7bbbde8586d01feaba56.template
