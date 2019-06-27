@@ -9,11 +9,54 @@ Parameters:
   Stage:
     Type: String
     Default: dev
+  AdminEmail:
+    Type: String
+    Default: dimitri+pipes@tarasowski.de
+  FallbackEmail:
+    Type: String
+    Default: dimitri+pipes2@tarasowski.de
+  S3AlarmPeriod:
+    Type: String
+    Default: 60
 
 Resources:
 
   DataBucket:
+    DependsOn:
+      - BucketPermission
     Type: AWS::S3::Bucket
+    Properties:
+      NotificationConfiguration:
+        TopicConfigurations:
+          - Event: 's3:ObjectCreated:*'
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: events/
+            Topic:
+              Ref: BucketEventsTopic
+              
+  BucketPermission:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      PolicyDocument:
+        Id: BucketTopicPolicyGA
+        Version: 2012-10-17
+        Statement:
+          - Sid: GA001 
+            Effect: Allow
+            Action: 
+              - sns:Publish
+            Resource:
+              Ref: BucketEventsTopic
+            Principal: 
+              Service: 's3.amazonaws.com'
+      Topics:
+        - Ref: BucketEventsTopic
+
+  BucketEventsTopic:
+    Type: AWS::SNS::Topic
 
   KinesisFirehoseRole:
     Type: AWS::IAM::Role
@@ -220,6 +263,23 @@ Resources:
       StageName: 
         Fn::Sub: ${Stage}
 
+  GoogleAnalyticsCollectorMonitoring:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./collector-ga-monitoring.yaml
+      Parameters:
+        Name:
+          Ref: Name
+        Stage:
+          Ref: Stage
+        AdminEmail:
+          Ref: AdminEmail
+        FallbackEmail:
+          Ref: FallbackEmail
+        S3AlarmPeriod:
+          Ref: S3AlarmPeriod
+        BucketEventsTopic:
+          Ref: BucketEventsTopic
 Outputs:
   CollectorEndpoint:
     Description: URL of the endpoint that should be used with Google Analytics Duplicator 
@@ -233,3 +293,4 @@ Outputs:
           - '.amazonaws.com/'
           - Fn::Sub: ${Stage} 
           - "/"
+

@@ -1,0 +1,31 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: Pipes infrastructure as code
+
+Parameters:
+  Name:
+    Type: String
+    Description: The name of the api
+    MinLength: 3
+    MaxLength: 30
+    Default: pipes
+  Stage:
+    Type: String
+    Description: The stage of the api
+    MinLength: 3
+    MaxLength: 20
+    Default: local 
+  AdminEmail:
+    Type: String
+    Description: An email of the person that should be notified in case data is missing
+    Default: dimitri+pipes@tarasowski.de
+  S3AlarmPeriod:
+    Type: String
+    Description: Provide a time value in seconds when the alarm should trigger when new data is missing in S3
+    Default: 60
+
+Resources:
+  TestStack:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./test-bucket.yaml
