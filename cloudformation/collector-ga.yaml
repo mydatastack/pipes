@@ -113,12 +113,12 @@ Resources:
   FirehoseProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Runtime: python3.7
+      Runtime: nodejs10.x 
       MemorySize: 128
       Timeout: 60
       ReservedConcurrentExecutions: 1 # remove when the function is safe
-      Handler: main.handler 
-      CodeUri: ../functions/ga-processor/
+      Handler: index.handler 
+      CodeUri: ../functions/frh-processor/
 
   EventFirehose:
     Type: AWS::KinesisFirehose::DeliveryStream
