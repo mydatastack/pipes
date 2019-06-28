@@ -25,8 +25,6 @@ Resources:
   EventStream:
     Type: AWS::Kinesis::Stream
     Properties:
-      Name: 
-        Fn::Sub: ${Name}-stream-${Stage}
       RetentionPeriodHours: 24
       ShardCount: 1
 
@@ -115,8 +113,6 @@ Resources:
   EventFirehose:
     Type: AWS::KinesisFirehose::DeliveryStream
     Properties:
-      DeliveryStreamName: 
-        Fn::Sub: ${Name}-firehose-${Stage} 
       S3DestinationConfiguration:
         BucketARN:
           Fn::GetAtt: [ DataBucket, Arn ]
@@ -132,12 +128,6 @@ Resources:
 
   ApiGatewayRestApi:
     Type: AWS::ApiGateway::RestApi
-    Properties:
-      Name:
-        Fn::Join:
-          - ""
-          - - Fn::Sub: ${Name}-${Stage} 
-            - "-api"
 
   ApiGatewayPostMethod:
     Type: AWS::ApiGateway::Method
