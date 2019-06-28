@@ -32,7 +32,7 @@ Resources:
   APIGatewayCollectorStack:
     Type: AWS::Serverless::Application
     Properties:
-      Location: https://s3.eu-central-1.amazonaws.com/pipes-cf-artifacts/1b897432f4686eb8fac49d280edaaf7b.template
+      Location: https://s3.eu-central-1.amazonaws.com/pipes-cf-artifacts/efa8dacfa75e09b69dfb425b7451cc98.template
       Parameters:
         Name:
           Ref: Name
@@ -47,7 +47,7 @@ Resources:
   GoogleAnalyticsCollectorStack:
     Type: AWS::Serverless::Application
     Properties:
-      Location: https://s3.eu-central-1.amazonaws.com/pipes-cf-artifacts/7a61c98ab22aaa689c3c49149ee08e09.template
+      Location: https://s3.eu-central-1.amazonaws.com/pipes-cf-artifacts/468a68f7d657ff4e57b781a150c3c48b.template
       Parameters:
         Name:
           Ref: Name
