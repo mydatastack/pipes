@@ -47,7 +47,7 @@ Resources:
   GoogleAnalyticsCollectorStack:
     Type: AWS::Serverless::Application
     Properties:
-      Location: https://s3.eu-central-1.amazonaws.com/pipes-cf-artifacts/27d2979f8d7e7a226b5b653be127f4fa.template
+      Location: https://s3.eu-central-1.amazonaws.com/pipes-cf-artifacts/468a68f7d657ff4e57b781a150c3c48b.template
       Parameters:
         Name:
           Ref: Name

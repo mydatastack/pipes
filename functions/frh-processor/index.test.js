@@ -6,7 +6,7 @@ describe('handler()', async assert =>
   assert({
     given: 'json firehose payload',
     should: 'decode base64, parse user_agent and decode it back',
-    actual: await handler(payload).then(x => x['records'].length),
-    expected: 11
+    actual: await handler(payload).then(x => Object.keys(x)),
+    expected: ['records'] 
   })
 )
