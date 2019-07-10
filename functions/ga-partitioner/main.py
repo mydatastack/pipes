@@ -1,46 +1,101 @@
 import json
 from functools import partial, reduce
-from collections import namedtuple, defaultdict
+from collections import namedtuple
 from urllib.parse import unquote
-from itertools import chain, groupby
-from operator import itemgetter
-import sys
+from itertools import groupby
 import boto3
+
 s3 = boto3.resource('s3')
 pipe = lambda *args: lambda x: reduce(lambda a, fn: fn(a), args, x)
 
 S3Object = namedtuple('S3MetaData', ('bucket', 'key'))
 
 
-get_records = lambda e: e['Records']
-get_list = lambda e: map(lambda e: e['s3'], e)
-get_s3metadata = lambda ev: map(lambda el: S3Object(el['bucket']['name'], unquote(el['object']['key'])), ev)
+def get_records(event: dict) -> list: 
+    return event['Records']
 
-def load_file(m):
+def get_list(event: list) -> list:
+    return [
+            el['s3'] 
+            for el in event
+           ]
+
+def get_s3metadata(s3meta: list) -> S3Object: 
+    return [
+            S3Object(el['bucket']['name'], unquote(el['object']['key'])) 
+            for el in s3meta
+           ]
+
+def load_file(m: list) -> str:
     try:
-        obj = s3.Object(m.bucket, m.key)
+        obj = s3.Object(m[0].bucket, m[0].key)
         return obj.get()['Body'].read().decode('utf-8')
     except Exception as e:
         print(e) 
 
-log = lambda desc: lambda value: print(desc + ': ' + json.dumps(list(value))) or value
 
-splitStr = lambda x: x.split('\n') 
+def split_str(data: str) -> list: 
+    return data.split('\n') 
 
-def group_source_events(entry_lst):
-   return  [(ds, evt, d) for entry in entry_lst]
+def remove_new_lines(data: list) -> list:
+    return [
+            line 
+            for line in data
+            if line
+           ]
+
+def decode_json(data: list) -> list:
+    return [
+            json.loads(line)
+            for line in data
+           ]
+
+def take_props(data: list) -> list:
+    return [
+            (el['body']['ds'], el['body']['t'], el) 
+            for el in data
+           ]
+
+def group_by_ds(data: list) -> list:
+    return [
+            (ds, event, list(dt for ds, ev, dt in data)) 
+            for ds, g1 in groupby(data, key=lambda x: x[0])
+            for event, data in groupby(g1, key=lambda x: x[1])
+            ]
+
+def sort_data(data: list) -> list:
+    return sorted(data, key=lambda t: (t[0],t[1])) 
+
+def construct_keys(event: dict, data: list):
+     keys = pipe(
+                get_records,
+                get_list,
+                get_s3metadata,
+            ) (event)          
+     bucket = keys[0].bucket
+     folders = keys[0].key.split('/')
+     base_folders = "/".join(folders[:2])
+     partition_folders = "/".join(folders[2:5])
+     return [
+             (bucket, base_folders + '/' + ds + '/' + event + '/' + partition_folders, ds, event, body) 
+             for ds, event, body in data
+            ]
+   
 
 def handler(event, ctx):
     return pipe( 
                 get_records,
                 get_list,
                 get_s3metadata,
-                (lambda o: map(load_file, o)),
-                (lambda o: map(splitStr, o)),
-                (lambda o: chain.from_iterable(o)), 
-                (lambda o: filter(lambda x: bool(x), o)),
-                (lambda o: map(lambda x: json.loads(x), o)),
-                (lambda o: map(lambda x: (x['body']['ds'], x['body']['t'],  x), o)),
-                group_source_events,
-                (lambda x: print(json.dumps(list(x), indent=4, separators=(',',':')))) 
+                load_file,
+                split_str,
+                remove_new_lines,
+                decode_json,
+                take_props,
+                sort_data,
+                group_by_ds,
+                partial(construct_keys, event),
+               (lambda x: print(json.dumps(x, indent=4, separators=(',',':')))),
+                #merge_tuples,
+                #(lambda x: print(x))
                )(event)
