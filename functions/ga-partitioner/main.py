@@ -5,6 +5,7 @@ from urllib.parse import unquote
 from itertools import groupby
 import boto3
 import time
+import re
 
 s3 = boto3.resource('s3')
 pipe = lambda *args: lambda x: reduce(lambda a, fn: fn(a), args, x)
@@ -51,23 +52,34 @@ def decode_json(data: list) -> list:
             json.loads(line)
             for line in data
            ]
+def get_valid_filename(s):
+    s = str(s).strip().replace(' ', '_')
+    return re.sub(r'(?u)[^-\w.]', '', s).lower()[:50]
 
 def take_props(data: list) -> list:
-    return [
-            (el['body']['tid'].lower(), el['body']['ds'], el['body']['t'], el) 
-            for el in data
-           ]
+    by_types = []
+    for el in data:
+        if el['body']['t'] == 'event':
+            by_types.append(
+                 (el['body']['tid'].lower(), el['body']['ds'], el['body']['t'], get_valid_filename(el['body']['ec']), el)
+                 ) 
+        else: 
+            by_types.append(
+                    (el['body']['tid'].lower(), el['body']['ds'], el['body']['t'], 'all', el)
+                    )
+    return by_types
 
 def group_by_ds(data: list) -> list:
     return [
-            (tid, ds, event, list(dt for tid, ds, ev, dt in data)) 
+            (tid, ds, event, event_type, list(dt for tid, ds, ev, et, dt in data)) 
             for tid, g1 in groupby(data, key=lambda x: x[0])
             for ds, g2 in groupby(g1, key=lambda x: x[1])
-            for event, data in groupby(g2, key=lambda x: x[2])
+            for event, g3 in groupby(g2, key=lambda x: x[2])
+            for event_type, data in groupby(g3, key=lambda x: x[3])
             ]
 
 def sort_data(data: list) -> list:
-    return sorted(data, key=lambda t: (t[0],t[1],t[2])) 
+    return sorted(data, key=lambda t: (t[0],t[1],t[2],t[3])) 
 
 def construct_keys(event: dict, data: list) -> list:
      keys = pipe(
@@ -79,15 +91,37 @@ def construct_keys(event: dict, data: list) -> list:
      folders = keys[0].key.split('/')
      base_folders = "/".join(folders[:2])
      partition_folders = "/".join(folders[2:6])
-     return [
-             (bucket, tid, base_folders + '/' + tid + '/' + ds + '/' + event + '/' + partition_folders, ds, event, body) 
-             for tid, ds, event, body in data
-            ]
+     with_folder = []
+     for tid, ds, event, event_type, body in data:
+         if event_type != 'all':
+             with_folder.append(
+                        (bucket, 
+                            tid, 
+                            base_folders + '/' + tid + '/' + ds + '/' + 
+                            event + '_' + event_type + '/' + partition_folders, 
+                            ds, 
+                            event, 
+                            event_type,
+                            body) 
+                     )
+         else:
+             with_folder.append(
+                        (bucket, 
+                            tid, 
+                            base_folders + '/' + tid + '/' + ds + '/' + 
+                            event + '/' + partition_folders, 
+                            ds, 
+                            event, 
+                            event_type,
+                            body) 
+                     )
+     return with_folder
+
 
 def save_to_s3(data: list, ts=time.strftime("%Y-%m-%dT%H:%M:%S%z", time.gmtime())) -> str:
     try:
-        for bucket, tid, folder, ds, event, body in data:
-            key = f'{tid}-{event}-{ts}'
+        for bucket, tid, folder, ds, event, event_type, body in data:
+            key = f'{tid}-{event}_{event_type}-{ts}' if event_type != 'all' else f'{tid}-{event}-{ts}'
             body_json = [json.dumps(record) for record in body]
             new_line_delimited = '\n'.join(body_json)
             s3.Object(bucket, folder + '/' + key).put(Body=new_line_delimited)
@@ -110,5 +144,4 @@ def handler(event, ctx):
                 group_by_ds,
                 partial(construct_keys, event),
                 save_to_s3,
-               (lambda x: print(json.dumps(x, indent=4, separators=(',',':'))) or x),
                )(event)

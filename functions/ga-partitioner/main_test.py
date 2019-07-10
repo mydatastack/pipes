@@ -9,7 +9,7 @@ class TestHandler(unittest.TestCase):
     def test_run_handler(self):
         with open('payload.json') as myfile:
             event = json.load(myfile)
-            self.assertEqual(handler(event, None), {})
+            self.assertEqual(handler(event, None), 'success')
 
 if __name__ == '__main__':
     unittest.main()
