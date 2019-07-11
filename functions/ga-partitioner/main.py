@@ -6,6 +6,11 @@ from itertools import groupby
 import boto3
 import time
 import re
+from concurrent.futures import ThreadPoolExecutor
+import asyncio
+
+_executor = ThreadPoolExecutor(max_workers=5)
+loop = asyncio.get_event_loop()
 
 s3 = boto3.resource('s3')
 pipe = lambda *args: lambda x: reduce(lambda a, fn: fn(a), args, x)
@@ -117,21 +122,28 @@ def construct_keys(event: dict, data: list) -> list:
                      )
      return with_folder
 
+def call_s3(bucket, key, data):
+    s3.Object(bucket, key).put(Body=data)
+    return 'success'
 
-def save_to_s3(data: list, ts=time.strftime("%Y-%m-%dT%H:%M:%S%z", time.gmtime())) -> str:
+async def construct_files(data, ts=time.strftime("%Y-%m-%dT%H:%M:%S%z", time.gmtime())):  
+    bucket, tid, folder, ds, event, event_type, body = data
+    key = f'{tid}-{event}_{event_type}-{ts}' if event_type != 'all' else f'{tid}-{event}-{ts}'
+    body_json = [json.dumps(record) for record in body]
+    new_line_delimited = '\n'.join(body_json)
+    await loop.run_in_executor(_executor, call_s3, bucket, folder + '/' + key, new_line_delimited)
+
+async def save_to_s3(data: list, ts=time.strftime("%Y-%m-%dT%H:%M:%S%z", time.gmtime())) -> str:
     try:
-        for bucket, tid, folder, ds, event, event_type, body in data:
-            key = f'{tid}-{event}_{event_type}-{ts}' if event_type != 'all' else f'{tid}-{event}-{ts}'
-            body_json = [json.dumps(record) for record in body]
-            new_line_delimited = '\n'.join(body_json)
-            s3.Object(bucket, folder + '/' + key).put(Body=new_line_delimited)
+        coros = [construct_files(slice) for slice in data] 
+        await asyncio.wait(coros)
         return 'success'
     except Exception as e:
         print(e) 
         return e
 
 def handler(event, ctx):
-    return pipe( 
+    data = pipe( 
                 get_records,
                 get_list,
                 get_s3metadata,
@@ -143,5 +155,12 @@ def handler(event, ctx):
                 sort_data,
                 group_by_ds,
                 partial(construct_keys, event),
-                save_to_s3,
-               )(event)
+             )(event)
+    try:
+        loop.run_until_complete(save_to_s3(data))
+        loop.close()
+        return 'success'
+    except Exception as e:
+        print(e)
+        return e 
+        
