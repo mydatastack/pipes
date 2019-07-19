@@ -14,8 +14,6 @@ import time
 
 S3Object = namedtuple('S3MetaData', ('bucket', 'key'))
 
-
-
 def configure_s3_aws_client():
     if os.environ.get('AWS_DEV') is not None:
         return boto3.resource(service_name='s3', endpoint_url='http://localhost:4572')
@@ -34,11 +32,11 @@ async def get_content_from_s3_object(bucket: str, key: str, s3)->list:
 async def get_content_from_s3_object_async(bucket: str, key: str, s3):
     return await asyncio.create_task(get_content_from_s3_object(bucket, key, s3))
 
+
 async def save_file_as_parquet(s3, name: str, data: pd.DataFrame):
-    #f's3://demo-bucket/{name}/1.parquet'
-    s3.Object('test-tarasowski-ga', f'{name}/1.json').put(Body=data.reset_index().to_json(orient='records'))
-    #print(data.reset_index().to_json(orient='records'))
-    print('stored')
+    key = f'{name}/data.json'
+    s3.Object('test-tarasowski-ga', key ).put(Body=data.reset_index().to_json(orient='records'))
+    print(f'stored by {key}')
 
 
 async def handler_async(event):
@@ -55,11 +53,7 @@ async def handler_async(event):
     print('-----------------------------------')
 
     data = [json_normalize(d) for d in data]
-    df = pd.concat(data, sort=True)#.drop_duplicates() #pd.DataFrame(json_normalize(data, errors='ignore')).drop_duplicates()
-    # with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
-    #     print(df.columns)
-
-
+    df = pd.concat(data, sort=True).drop_duplicates(subset= ['message_id', 'received_at_apig', 'trace_id']) #pd.DataFrame(json_normalize(data, errors='ignore')).drop_duplicates()
 
     df['date_time'] = df.received_at_apig.apply(lambda e: datetime.utcfromtimestamp(int(int(e) / 1000 )))
     df['year'] = df.date_time.apply(lambda e: e.year)
@@ -72,10 +66,6 @@ async def handler_async(event):
     await asyncio.gather(*tasks)
 
 
-# Steps to process
-# 1. parse payloda
 def handler(event, ctx):
     loop = asyncio.get_event_loop()
     return loop.run_until_complete(handler_async(event))
-    # for bucket in s3.buckets.all():
-    #     print(bucket)
