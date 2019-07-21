@@ -6,11 +6,6 @@ from itertools import groupby
 import boto3
 import time
 import re
-from concurrent.futures import ThreadPoolExecutor
-import asyncio
-
-_executor = ThreadPoolExecutor(max_workers=5)
-loop = asyncio.get_event_loop()
 
 s3 = boto3.resource('s3')
 pipe = lambda *args: lambda x: reduce(lambda a, fn: fn(a), args, x)
@@ -122,23 +117,20 @@ def construct_keys(event: dict, data: list) -> list:
                      )
      return with_folder
 
-def call_s3(bucket, key, data):
-    s3.Object(bucket, key).put(Body=data)
-    return 'success'
 
-async def construct_files(data, ts=time.strftime("%Y-%m-%dT%H:%M:%S%z", time.gmtime())):  
+def construct_files(data, ts=time.strftime("%Y-%m-%dT%H:%M:%S%z", time.gmtime())):  
     bucket, tid, folder, ds, event, event_type, body = data
     key = f'{tid}-{event}_{event_type}-{ts}' if event_type != 'all' else f'{tid}-{event}-{ts}'
     body_json = [json.dumps(record) for record in body]
     new_line_delimited = '\n'.join(body_json)
-    await loop.run_in_executor(_executor, call_s3, bucket, folder + '/' + key, new_line_delimited)
+    return s3.Object(bucket, 'processed/' + folder + '/' + key).put(Body=new_line_delimited)
 
-async def save_to_s3(data: list, ts=time.strftime("%Y-%m-%dT%H:%M:%S%z", time.gmtime())) -> str:
+def save_to_s3(data: list, ts=time.strftime("%Y-%m-%dT%H:%M:%S%z", time.gmtime())) -> str:
     try:
-        coros = [construct_files(slice) for slice in data] 
-        await asyncio.wait(coros)
+        operations = [construct_files(slice) for slice in data] 
         return 'success'
     except Exception as e:
+        print('it comes from the exception')
         print(e) 
         return e
 
@@ -157,9 +149,7 @@ def handler(event, ctx):
                 partial(construct_keys, event),
              )(event)
     try:
-        loop.run_until_complete(save_to_s3(data))
-        loop.close()
-        return 'success'
+        return save_to_s3(data)
     except Exception as e:
         print(e)
         return e 
