@@ -8,7 +8,7 @@ const userAgent = 'Mozilla/5.0 (Linux; Android 5.0; NX505J Build/KVT49L) AppleWe
 const result = detector.detect(userAgent)
 
 const b64Decode = b64string => Buffer.from(b64string, 'base64').toString('ascii')
-const b64Encode = string => Buffer.from(JSON.stringify(string)).toString('base64')
+const b64Encode = string => Buffer.from(JSON.stringify(string) + '\n').toString('base64')
 const getData = xs => xs.map(e => ({...e, data: JSON.parse(b64Decode(e.data))}))
 const parseBody = xs => xs.map(e => ({...e, data: {...e.data, body: querystring.decode(e.data.body)}}))
 const getProp =  prop => o => o[prop]
@@ -79,7 +79,7 @@ const constructFirehoseResponse = ps =>
     recordId: e.recordId,
     result: 'Ok',
     data: {
-    data_source: e.data.data_source, 
+    system_source: e.data.system_source, 
     api_key: e.data.api_key,
     message_id: e.data.message_id,
     trace_id: e.data.trace_id,
@@ -91,6 +91,7 @@ const constructFirehoseResponse = ps =>
     geo: e.geo
   }})))
     .then(xs => xs.map(e => ({...e, data: b64Encode(e.data)}))) 
+    .then(xs => console.log(xs) || xs)
     .then(xs => ({records: xs}))
 
 const handler = async event =>

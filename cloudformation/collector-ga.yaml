@@ -28,12 +28,12 @@ Resources:
     Properties:
       NotificationConfiguration:
         TopicConfigurations:
-          - Event: 's3:ObjectCreated:*'
+          - Event: 's3:ObjectCreated:Put'
             Filter:
               S3Key:
                 Rules:
                   - Name: prefix
-                    Value: events/
+                    Value: raw/ga/
             Topic:
               Ref: BucketEventsTopic
               
@@ -120,6 +120,52 @@ Resources:
       Handler: index.handler 
       CodeUri: ../functions/frh-processor/
 
+  PartitionerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Runtime: python3.7
+      MemorySize: 128
+      Timeout: 60
+      ReservedConcurrentExecutions: 1 # remove when the function is safe
+      Handler: main.handler
+      CodeUri: ../functions/ga-partitioner/
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - s3:AbortMultipartUpload
+                - s3:GetBucketLocation
+                - s3:GetObject
+                - s3:ListBucket
+                - s3:ListBucketMultipartUploads
+                - s3:PutObject
+              Resource:
+                - Fn::GetAtt: [ DataBucket , Arn ]
+                - Fn::Join:
+                  - ""
+                  - - Fn::GetAtt: [ DataBucket , Arn ]
+                    - "/*"
+
+  PartitionerFunctionSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint:
+        Fn::GetAtt: [PartitionerFunction, Arn]
+      TopicArn:
+        Ref: BucketEventsTopic
+      Protocol: lambda
+
+  PartitionerInvokePermissions:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      Principal: 'sns.amazonaws.com'
+      SourceArn: 
+        Ref: BucketEventsTopic
+      FunctionName:
+        Fn::GetAtt: [PartitionerFunction, Arn]
+
   EventFirehose:
     Type: AWS::KinesisFirehose::DeliveryStream
     Properties:
@@ -130,7 +176,7 @@ Resources:
           IntervalInSeconds: 60
           SizeInMBs: 10
         CompressionFormat: UNCOMPRESSED
-        Prefix: "events/year=!{timestamp:YYYY}/month=!{timestamp:MM}/day=!{timestamp:dd}/hour=!{timestamp:HH}/"
+        Prefix: "raw/ga/year=!{timestamp:YYYY}/month=!{timestamp:MM}/day=!{timestamp:dd}/hour=!{timestamp:HH}/"
         ErrorOutputPrefix: "errors/!{firehose:random-string}/!{firehose:error-output-type}/!{timestamp:yyyy/MM/dd}/"
         RoleARN:
           Fn::GetAtt: [ KinesisFirehoseRole, Arn ]
@@ -199,8 +245,8 @@ Resources:
         IntegrationHttpMethod: POST #for kinesis using POST is required
         RequestTemplates:
           text/plain: !Sub | 
-            #set( $data_source = "data_source")
-            #set( $data_source_val = "ga_v1")
+            #set( $system_source = "system_source")
+            #set( $system_source_val = "ga_v1")
             #set( $key = "api_key" )
             #set( $key_ = $context.identity.apiKey )
             #set( $trace_id_val = $input.params().get("header").get("X-Amzn-Trace-Id"))#set( $bodyname = "body" )
@@ -216,7 +262,7 @@ Resources:
             #set( $user_agent = "user_agent")
             #set( $user_agent_val = $context.identity.userAgent)
             #set( $quote = '"' )
-            #set( $b64 = $util.base64Encode("{$quote$data_source$quote:$quote$data_source_val$quote,$quote$key$quote:$quote$key_val$quote,$quote$message_id$quote:$quote$message_id_val$quote,$quote$trace_id$quote:$quote$trace_id_val$quote,$quote$received_at_apig$quote:$quote$received_at_apig_val$quote,$quote$ip$quote:$quote$ip_val$quote, $quote$user_agent$quote:$quote$user_agent_val$quote,$quote$body$quote:$quote$body_val$quote}"))
+            #set( $b64 = $util.base64Encode("{$quote$system_source$quote:$quote$system_source_val$quote,$quote$key$quote:$quote$key_val$quote,$quote$message_id$quote:$quote$message_id_val$quote,$quote$trace_id$quote:$quote$trace_id_val$quote,$quote$received_at_apig$quote:$quote$received_at_apig_val$quote,$quote$ip$quote:$quote$ip_val$quote, $quote$user_agent$quote:$quote$user_agent_val$quote,$quote$body$quote:$quote$body_val$quote}"))
             {
              "DeliveryStreamName": "${EventFirehose}", 
              "Record": {"Data": "$b64"}

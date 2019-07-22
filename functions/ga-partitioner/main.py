@@ -34,7 +34,7 @@ def load_file(m: list) -> str:
         return obj.get()['Body'].read().decode('utf-8')
     except Exception as e:
         print(e) 
-        return e
+        return [] 
 
 
 def split_str(data: str) -> list: 
@@ -81,15 +81,22 @@ def group_by_ds(data: list) -> list:
 def sort_data(data: list) -> list:
     return sorted(data, key=lambda t: (t[0],t[1],t[2],t[3])) 
 
+def folder_name_events(*args):
+    return f'system_source={args[0]}/tracking_id={args[1]}/data_source={args[2]}/event_type={args[3]}_{args[4]}/{args[5]}'
+
+def folder_name_all(*args):
+    return f'system_source={args[0]}/tracking_id={args[1]}/data_source={args[2]}/event_type={args[3]}/{args[4]}'
+
+
 def construct_keys(event: dict, data: list) -> list:
      keys = pipe(
-                get_records,
+                sns_adapter,
                 get_list,
                 get_s3metadata,
             ) (event)          
      bucket = keys[0].bucket
      folders = keys[0].key.split('/')
-     base_folders = "/".join(folders[:2])
+     base_folders = "/".join(folders[1:2])
      partition_folders = "/".join(folders[2:6])
      with_folder = []
      for tid, ds, event, event_type, body in data:
@@ -97,8 +104,14 @@ def construct_keys(event: dict, data: list) -> list:
              with_folder.append(
                         (bucket, 
                             tid, 
-                            base_folders + '/' + tid + '/' + ds + '/' + 
-                            event + '_' + event_type + '/' + partition_folders, 
+                            folder_name_events(
+                                    base_folders, 
+                                    tid, 
+                                    ds,
+                                    event, 
+                                    event_type, 
+                                    partition_folders
+                            ),
                             ds, 
                             event, 
                             event_type,
@@ -108,8 +121,13 @@ def construct_keys(event: dict, data: list) -> list:
              with_folder.append(
                         (bucket, 
                             tid, 
-                            base_folders + '/' + tid + '/' + ds + '/' + 
-                            event + '/' + partition_folders, 
+                            folder_name_all(
+                                    base_folders, 
+                                    tid, 
+                                    ds,
+                                    event, 
+                                    partition_folders
+                            ),
                             ds, 
                             event, 
                             event_type,
@@ -134,9 +152,26 @@ def save_to_s3(data: list, ts=time.strftime("%Y-%m-%dT%H:%M:%S%z", time.gmtime()
         print(e) 
         return e
 
+def sns_adapter(event):
+    records = event['Records']
+    messages = [record['Sns']['Message'] for record in records]
+    try:
+        decoded = [json.loads(message) for message in messages]
+        records_list = [record['Records'] for record in decoded]
+        flat_records_list = [
+                item
+                for sublist in records_list
+                for item in sublist
+                ]
+        return flat_records_list
+    except Exception as e:
+        print(e)
+        return []
+
+
 def handler(event, ctx):
     data = pipe( 
-                get_records,
+                sns_adapter,
                 get_list,
                 get_s3metadata,
                 load_file,
