@@ -1,11 +1,14 @@
 const pipe = fns => x => fns.reduce((v, f) => f(v), x)
 const maxmind = require('maxmind')
 const DeviceDetector = require('node-device-detector')
-const detector = new DeviceDetector
 const querystring = require('querystring')
+const detector = new DeviceDetector
+const userAgent = 'Mozilla/5.0 (Linux; Android 5.0; NX505J Build/KVT49L) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.78 Mobile Safari/537.36';
+
+const result = detector.detect(userAgent)
 
 const b64Decode = b64string => Buffer.from(b64string, 'base64').toString('ascii')
-const b64Encode = string => Buffer.from(string).toString('base64')
+const b64Encode = string => Buffer.from(JSON.stringify(string) + '\n').toString('base64')
 const getData = xs => xs.map(e => ({...e, data: JSON.parse(b64Decode(e.data))}))
 const parseBody = xs => xs.map(e => ({...e, data: {...e.data, body: querystring.decode(e.data.body)}}))
 const getProp =  prop => o => o[prop]
@@ -76,7 +79,7 @@ const constructFirehoseResponse = ps =>
     recordId: e.recordId,
     result: 'Ok',
     data: {
-    data_source: e.data.data_source, 
+    system_source: e.data.system_source, 
     api_key: e.data.api_key,
     message_id: e.data.message_id,
     trace_id: e.data.trace_id,
@@ -87,7 +90,8 @@ const constructFirehoseResponse = ps =>
     body: e.data.body,
     geo: e.geo
   }})))
-    .then(xs => xs.map(e => ({...e, data: b64Encode(JSON.stringify(e.data) + '\n')}))) 
+    .then(xs => xs.map(e => ({...e, data: b64Encode(e.data)}))) 
+    .then(xs => console.log(xs) || xs)
     .then(xs => ({records: xs}))
 
 const handler = async event =>

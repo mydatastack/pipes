@@ -1,11 +1,11 @@
 TEMPLATES=main collector-pipes-apig collector-ga collector-ga-monitoring 
 
 # Google Duplicator Deplyoment Variables
-GA_STACK_FILE=google-analytics-collector.yaml
-MONITORING_TEMPLAE=monitoring.yaml
+GA_STACK_FILE=collector-ga.yaml
+MONITORING_TEMPLATE=collector-ga-monitoring.yaml
 BUCKET=pipes-cf-artifacts
-GA_STACKNAME=tarasowski-pipes-dev-machine
-MONITORING_STACKNAME=monitoring-pipes-dev-machine
+GA_STACKNAME=tarasowski-ga-dev-machine
+MONITORING_STACKNAME=tarasowski-ga-monitoring-dev-machine
 MAIN_TEMPLATE=main.yaml
 MAIN_STACKNAME=tarasowski-main-dev-machine
 REGION=eu-central-1
@@ -30,7 +30,7 @@ mon_deploy: validate
 		 mkdir -p temp/monitoring; \
 	fi
 	@rm -rf temp/monitoring && mkdir -p temp/monitoring
-	@aws cloudformation package --template-file $(MONITORING_TEMPLAE) --output-template-file temp/monitoring/output.yaml --s3-bucket $(BUCKET) --region eu-central-1
+	@aws cloudformation package --template-file $(MONITORING_TEMPLATE) --output-template-file temp/monitoring/output.yaml --s3-bucket $(BUCKET) --region eu-central-1
 	@aws cloudformation deploy --template-file temp/monitoring/output.yaml --stack-name $(MONITORING_STACKNAME) --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --region eu-central-1
 
 create_bucket:
