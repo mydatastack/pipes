@@ -102,6 +102,36 @@ Resources:
       ParentId:
         Ref: GoogleAnalyticsResource
       PathPart: v1
+  OptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      RestApiId:
+        Ref: ApiGatewayRestApi
+      ResourceId:
+        Ref: GoogleAnalyticsVersion
+      HttpMethod: OPTIONS
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
+            method.response.header.Access-Control-Allow-Methods: '''POST,OPTIONS'''
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+          ResponseTemplates:
+            application/json: ''
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+      - StatusCode: 200
+        ResponseModels:
+          application/json: Empty
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Headers: false
+          method.response.header.Access-Control-Allow-Methods: false
+          method.response.header.Access-Control-Allow-Origin: false
   ApiGatewayPostMethod:
     Type: AWS::ApiGateway::Method
     Properties:
@@ -149,6 +179,7 @@ Resources:
             method.response.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
             method.response.header.Access-Control-Allow-Methods: '''POST,OPTIONS'''
             method.response.header.Access-Control-Allow-Origin: '''*'''
+        PassthroughBehavior: NEVER
       MethodResponses:
       - StatusCode: 200
         ResponseParameters:
