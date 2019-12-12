@@ -1,0 +1,222 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Parameters:
+  Name:
+    Type: String
+    Default: PipesAPI
+  Stage:
+    Type: String
+    Default: dev
+  AdminEmail:
+    Type: String
+    Default: dimitri+pipes@tarasowski.de
+  FallbackEmail:
+    Type: String
+    Default: dimitri+pipes2@tarasowski.de
+  S3AlarmPeriod:
+    Type: String
+    Default: 60
+Resources:
+  DataBucket:
+    Type: AWS::S3::Bucket
+  EventFirehose:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      ExtendedS3DestinationConfiguration:
+        BucketARN:
+          Fn::GetAtt:
+          - DataBucket
+          - Arn
+        BufferingHints:
+          IntervalInSeconds: 60
+          SizeInMBs: 10
+        CompressionFormat: UNCOMPRESSED
+        Prefix: raw/ga/year=!{timestamp:YYYY}/month=!{timestamp:MM}/day=!{timestamp:dd}/
+        ErrorOutputPrefix: errors/!{firehose:random-string}/!{firehose:error-output-type}/!{timestamp:yyyy/MM/dd}/
+        RoleARN:
+          Fn::GetAtt:
+          - KinesisFirehoseRole
+          - Arn
+  KinesisFirehoseRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - firehose.amazonaws.com
+          Action:
+          - sts:AssumeRole
+  S3DeliveryPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: firehose_s3delivery_policy
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - s3:AbortMultipartUpload
+          - s3:GetBucketLocation
+          - s3:GetObject
+          - s3:ListBucket
+          - s3:ListBucketMultipartUploads
+          - s3:PutObject
+          Resource:
+          - Fn::GetAtt:
+            - DataBucket
+            - Arn
+          - Fn::Join:
+            - ''
+            - - Fn::GetAtt:
+                - DataBucket
+                - Arn
+              - /*
+      Roles:
+      - Ref: KinesisFirehoseRole
+  ApiGatewayRestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name:
+        Fn::Join:
+        - ''
+        - - Ref: AWS::StackName
+          - -api
+  GoogleAnalyticsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayRestApi
+      ParentId:
+        Fn::GetAtt:
+        - ApiGatewayRestApi
+        - RootResourceId
+      PathPart: com.pipesdata
+  GoogleAnalyticsVersion:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayRestApi
+      ParentId:
+        Ref: GoogleAnalyticsResource
+      PathPart: v1
+  ApiGatewayPostMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ResourceId:
+        Ref: GoogleAnalyticsVersion
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: POST
+      Integration:
+        Type: AWS
+        Credentials:
+          Fn::GetAtt:
+          - GatewayRole
+          - Arn
+        Uri:
+          Fn::Join:
+          - ''
+          - - 'arn:aws:apigateway:'
+            - Ref: AWS::Region
+            - :firehose:action/PutRecord
+        IntegrationHttpMethod: POST
+        RequestTemplates:
+          application/json:
+            Fn::Sub: "#set( $system_source = \"system_source\")\n#set( $system_source_val\
+              \ = \"ga\")\n#set( $system_version = \"system_version\")\n#set( $system_version_val\
+              \ = \"1\")\n#set( $trace_id_val = $input.params().get(\"header\").get(\"\
+              X-Amzn-Trace-Id\"))\n#set( $bodyname = \"body\" )\n#set( $trace_id =\
+              \ \"trace_id\")\n#set( $received_at_apig = \"received_at_apig\")\n#set(\
+              \ $received_at_apig_val = $context.requestTimeEpoch)\n#set( $body =\
+              \ \"body\")\n#set( $body_val = $input.body)\n#set( $message_id = \"\
+              message_id\")\n#set( $message_id_val = $context.requestId)\n#set( $ip\
+              \ = \"ip\")\n#set( $ip_val = $context.identity.sourceIp)\n#set( $user_agent\
+              \ = \"user_agent\")\n#set( $user_agent_val = $context.identity.userAgent)\n\
+              #set( $quote = '\"' )\n#set( $b64 = $util.base64Encode(\"{$quote$system_source$quote:$quote$system_source_val$quote,$quote$system_version$quote:$quote$system_version_val$quote,$quote$message_id$quote:$quote$message_id_val$quote,$quote$trace_id$quote:$quote$trace_id_val$quote,$quote$received_at_apig$quote:$quote$received_at_apig_val$quote,$quote$ip$quote:$quote$ip_val$quote,\
+              \ $quote$user_agent$quote:$quote$user_agent_val$quote,$quote$body$quote:$quote$body_val$quote}\"\
+              ))\n{\n \"DeliveryStreamName\": \"${EventFirehose}\", \n \"Record\"\
+              : {\"Data\": \"$b64\"}\n}\n"
+        RequestParameters:
+          integration.request.header.Content-Type: '''application/x-amz-json-1.1'''
+        IntegrationResponses:
+        - StatusCode: 200
+          ResponseTemplates:
+            application/json: '{"status":"OK"}'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
+            method.response.header.Access-Control-Allow-Methods: '''POST,OPTIONS'''
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+      MethodResponses:
+      - StatusCode: 200
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Origin: true
+      RestApiId:
+        Ref: ApiGatewayRestApi
+  GatewayRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - apigateway.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: GatewayRolePolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - firehose:PutRecord
+            Resource: '*'
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+    - ApiGatewayPostMethod
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayRestApi
+      StageName:
+        Fn::Sub: ${Stage}
+Outputs:
+  ApiId:
+    Description: The ID for the API in order to construct the tracking endpoint
+    Value:
+      Ref: ApiGatewayRestApi
+    Export:
+      Name: Pipesdata-ApiId
+  ApiStage:
+    Description: The Stage of the API in order to construct the tracking endpoint
+    Value:
+      Ref: Stage
+    Export:
+      Name: Pipesdata-ApiStage
+  ApiRegion:
+    Description: The Region of the API in order to construct the tracking endpoint
+    Value:
+      Ref: AWS::Region
+    Export:
+      Name: Pipesdata-ApiRegion
+  ApiPath:
+    Description: The Path of the POST endpoint in order to construct the tracking
+      endpoint
+    Value:
+      Fn::Sub: ${Stage}/com.pipesdata/v1
+    Export:
+      Name: Pipesdata-ApiPath
+  ApiKey:
+    Description: The Path of the POST endpoint in order to construct the tracking
+      endpoint
+    Value: no-key
+    Export:
+      Name: Pipesdata-ApiKey

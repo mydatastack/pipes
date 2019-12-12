@@ -175,7 +175,8 @@ Resources:
         - StatusCode: 200
       ResourceId:
         Fn::GetAtt: [ ApiGatewayRestApi , RootResourceId ]
-      RestApiId: !Ref ApiGatewayRestApi
+      RestApiId: 
+        Ref: ApiGatewayRestApi
 
   GatewayRole:
     Type: AWS::IAM::Role

@@ -11,6 +11,10 @@ MAIN_STACKNAME=tarasowski-main-dev-machine
 REGION=eu-central-1
 #-----
 
+deploy-collector: 
+	@aws cloudformation package --template-file ./collector-pipes-firehose.yaml --output-template-file output.yaml --s3-bucket $(BUCKET) --region eu-central-1
+	@aws cloudformation deploy --template-file ./output.yaml --stack-name tarasowski-local-collector --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --region eu-central-1
+
 validate:
 	@for i in $(TEMPLATES); do \
 		aws cloudformation validate-template --template-body file://$$i.yaml; \
