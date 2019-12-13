@@ -51,7 +51,8 @@ Resources:
   S3DeliveryPolicy:
     Type: AWS::IAM::Policy
     Properties:
-      PolicyName: firehose_s3delivery_policy
+      PolicyName: 
+        Fn::Sub: 'firehose_s3delivery_policy-${Stage}'
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
