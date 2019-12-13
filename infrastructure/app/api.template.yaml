@@ -1,0 +1,174 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: API for the tracking endpoint
+
+Parameters:
+  Name:
+    Type: String
+  Stage:
+    Type: String
+
+Resources:
+  ApiGatewayRestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name:
+        Fn::Join:
+          - ""
+          - - Ref: AWS::StackName
+            - "-api"
+
+# Resources ########
+#
+# #################
+
+  GoogleAnalyticsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayRestApi
+      ParentId: 
+        Fn::GetAtt: [ApiGatewayRestApi, RootResourceId]
+      PathPart: com.pipesdata 
+
+  GoogleAnalyticsVersion:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayRestApi
+      ParentId: 
+        Ref: GoogleAnalyticsResource
+      PathPart: v1
+    
+# Methods ########
+#
+# ###############  
+
+
+  OptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      RestApiId:
+        Ref: ApiGatewayRestApi
+      ResourceId:
+        Ref: GoogleAnalyticsVersion
+      HttpMethod: OPTIONS
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'" 
+            ResponseTemplates:
+              application/json: ''
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: 'Empty'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Origin: false
+
+  ApiGatewayPostMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ResourceId: 
+        Ref: GoogleAnalyticsVersion 
+      ApiKeyRequired: false 
+      AuthorizationType: NONE
+      HttpMethod: POST
+      Integration:
+        Type: AWS #signal that we want to use an internal AWS service
+        Credentials:
+          Fn::GetAtt: [ GatewayRole, Arn ] #role for the API to actually invoke the firehose
+        Uri:
+          Fn::Join:
+            - ""
+            - - "arn:aws:apigateway:"
+              - Ref: AWS::Region
+              - ":firehose:action/PutRecord" #this URI basically describes the service and action I want to invoke.
+        IntegrationHttpMethod: POST #for kinesis using POST is required
+        RequestTemplates:
+          application/json: !Sub | 
+            #set( $system_source = "system_source")
+            #set( $system_source_val = "ga")
+            #set( $system_version = "system_version")
+            #set( $system_version_val = "1")
+            #set( $trace_id_val = $input.params().get("header").get("X-Amzn-Trace-Id"))
+            #set( $bodyname = "body" )
+            #set( $trace_id = "trace_id")
+            #set( $received_at_apig = "received_at_apig")
+            #set( $received_at_apig_val = $context.requestTimeEpoch)
+            #set( $body = "body")
+            #set( $body_val = $input.body)
+            #set( $message_id = "message_id")
+            #set( $message_id_val = $context.requestId)
+            #set( $ip = "ip")
+            #set( $ip_val = $context.identity.sourceIp)
+            #set( $user_agent = "user_agent")
+            #set( $user_agent_val = $context.identity.userAgent)
+            #set( $quote = '"' )
+            #set( $b64 = $util.base64Encode("{$quote$system_source$quote:$quote$system_source_val$quote,$quote$system_version$quote:$quote$system_version_val$quote,$quote$message_id$quote:$quote$message_id_val$quote,$quote$trace_id$quote:$quote$trace_id_val$quote,$quote$received_at_apig$quote:$quote$received_at_apig_val$quote,$quote$ip$quote:$quote$ip_val$quote, $quote$user_agent$quote:$quote$user_agent_val$quote,$quote$body$quote:$quote$body_val$quote}"))
+            {
+              "DeliveryStreamName": "{{resolve:ssm:/applications/pipes/${Stage}/firehose/name:1}}", 
+             "Record": {"Data": "$b64"}
+            }
+        RequestParameters:
+          integration.request.header.Content-Type: "'application/x-amz-json-1.1'"
+        IntegrationResponses:
+          - StatusCode: 200 #create a default response for the caller
+            ResponseTemplates:
+              application/json: '{"status":"OK"}'
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'" 
+        PassthroughBehavior: NEVER
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+      RestApiId: 
+        Ref: ApiGatewayRestApi
+
+  GatewayRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - apigateway.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: GatewayRolePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+                - firehose:PutRecord
+              Resource: "*"
+
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - ApiGatewayPostMethod
+    Properties:
+      RestApiId: 
+        Ref: ApiGatewayRestApi
+      StageName: 
+        Fn::Sub: ${Stage}

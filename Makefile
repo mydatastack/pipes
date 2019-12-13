@@ -1,23 +1,25 @@
-TEMPLATES=main collector-pipes-apig collector-ga collector-ga-monitoring 
+TEMPLATES=template api.template firehose.template 
 
 # Google Duplicator Deplyoment Variables
 GA_STACK_FILE=collector-ga.yaml
 MONITORING_TEMPLATE=collector-ga-monitoring.yaml
-BUCKET=pipes-cf-artifacts
+CFN_BUCKET :=pipes-cf-artifacts
 GA_STACKNAME=tarasowski-ga-dev-machine
 MONITORING_STACKNAME=tarasowski-ga-monitoring-dev-machine
 MAIN_TEMPLATE=main.yaml
 MAIN_STACKNAME=tarasowski-main-dev-machine
 REGION=eu-central-1
+STACK_NAME := tarasowski-pipes-local-test
 #-----
 
-deploy-collector: 
-	@aws cloudformation package --template-file ./collector-pipes-firehose.yaml --output-template-file output.yaml --s3-bucket $(BUCKET) --region eu-central-1
-	@aws cloudformation deploy --template-file ./output.yaml --stack-name tarasowski-local-collector --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --region eu-central-1
+deploy:
+	aws cloudformation package --template ./infrastructure/app/template.yaml --s3-bucket $(CFN_BUCKET) --output json > ./infrastructure/app/output.json
+	aws cloudformation deploy --template-file ./infrastructure/app/output.json --stack-name $(STACK_NAME) --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --region eu-central-1
+
 
 validate:
 	@for i in $(TEMPLATES); do \
-		aws cloudformation validate-template --template-body file://$$i.yaml; \
+		aws cloudformation validate-template --template-body file://infrastructure/app/$$i.yaml; \
 		done
 	@echo All cloudfromation files are valid
 
