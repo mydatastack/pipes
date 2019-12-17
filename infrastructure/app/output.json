@@ -14,13 +14,13 @@ Parameters:
     Description: The stage of the api
     MinLength: 3
     MaxLength: 20
-    Default: local
+    Default: dev
 Resources:
   API:
     Type: AWS::Serverless::Application
     DependsOn: Firehose
     Properties:
-      Location: https://s3.eu-central-1.amazonaws.com/pipes-cf-artifacts/c8a39c67df8114a6ebe5512bf4dcd587.template
+      Location: https://s3.eu-central-1.amazonaws.com/pipes-cf-artifacts/8df71809a59d8ea86dd26f819af2ecb1.template
       Parameters:
         Name:
           Ref: Name

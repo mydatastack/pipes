@@ -94,7 +94,7 @@ Resources:
         RequestTemplates:
           application/json: !Sub | 
             #set( $system_source = "system_source")
-            #set( $system_source_val = "ga")
+            #set( $system_source_val = "pipes")
             #set( $system_version = "system_version")
             #set( $system_version_val = "1")
             #set( $trace_id_val = $input.params().get("header").get("X-Amzn-Trace-Id"))
@@ -191,7 +191,7 @@ Resources:
     Type: AWS::SSM::Parameter
     Properties:
       Name:
-        Fn::Sub: '/application/pipes/${Stage}/api-gateway/path'
+        Fn::Sub: '/applications/pipes/${Stage}/api-gateway/path'
       Type: String
       Value:
         Fn::Sub: '${Stage}/com.pipesdata/v1'
@@ -200,7 +200,7 @@ Resources:
     Type: AWS::SSM::Parameter
     Properties:
       Name:
-        Fn::Sub: '/application/pipes/${Stage}/api-gateway/key'
+        Fn::Sub: '/applications/pipes/${Stage}/api-gateway/key'
       Type: String
       Value: 'no key'
 

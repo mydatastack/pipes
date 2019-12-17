@@ -14,7 +14,7 @@ Parameters:
     Description: The stage of the api
     MinLength: 3
     MaxLength: 20
-    Default: local 
+    Default: dev 
 
 Resources:
   API:
