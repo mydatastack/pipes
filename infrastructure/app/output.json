@@ -1,0 +1,37 @@
+
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: Pipes infrastructure as code
+Parameters:
+  Name:
+    Type: String
+    Description: The name of the api
+    MinLength: 3
+    MaxLength: 30
+    Default: pipes
+  Stage:
+    Type: String
+    Description: The stage of the api
+    MinLength: 3
+    MaxLength: 20
+    Default: local
+Resources:
+  API:
+    Type: AWS::Serverless::Application
+    DependsOn: Firehose
+    Properties:
+      Location: https://s3.eu-central-1.amazonaws.com/pipes-cf-artifacts/c8a39c67df8114a6ebe5512bf4dcd587.template
+      Parameters:
+        Name:
+          Ref: Name
+        Stage:
+          Ref: Stage
+  Firehose:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: https://s3.eu-central-1.amazonaws.com/pipes-cf-artifacts/179bd0e43aaabaa1a1ad6c9306d55e79.template
+      Parameters:
+        Name:
+          Ref: Name
+        Stage:
+          Ref: Stage

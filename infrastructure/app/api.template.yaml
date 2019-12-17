@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 Transform: AWS::Serverless-2016-10-31
-Description: API for the tracking endpoint
+Description: Tracking Endpoint for the API
 
 Parameters:
   Name:
@@ -18,7 +18,7 @@ Resources:
           - - Ref: AWS::StackName
             - "-api"
 
-  GoogleAnalyticsResource:
+  PipesResource:
     Type: AWS::ApiGateway::Resource
     Properties:
       RestApiId:
@@ -27,13 +27,13 @@ Resources:
         Fn::GetAtt: [ApiGatewayRestApi, RootResourceId]
       PathPart: com.pipesdata 
 
-  GoogleAnalyticsVersion:
+  PipesVersion:
     Type: AWS::ApiGateway::Resource
     Properties:
       RestApiId:
         Ref: ApiGatewayRestApi
       ParentId: 
-        Ref: GoogleAnalyticsResource
+        Ref: PipesResource
       PathPart: v1
     
 # Methods ########
@@ -48,7 +48,7 @@ Resources:
       RestApiId:
         Ref: ApiGatewayRestApi
       ResourceId:
-        Ref: GoogleAnalyticsVersion
+        Ref: PipesVersion
       HttpMethod: OPTIONS
       Integration:
         Type: MOCK
@@ -76,7 +76,7 @@ Resources:
     Type: AWS::ApiGateway::Method
     Properties:
       ResourceId: 
-        Ref: GoogleAnalyticsVersion 
+        Ref: PipesVersion 
       ApiKeyRequired: false 
       AuthorizationType: NONE
       HttpMethod: POST
@@ -168,3 +168,39 @@ Resources:
         Ref: ApiGatewayRestApi
       StageName: 
         Fn::Sub: ${Stage}
+
+  APIRegion:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name:
+        Fn::Sub: '/applications/pipes/${Stage}/api-gateway/region'
+      Type: String
+      Value:
+        Ref: AWS::Region
+
+  ApiId:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name:
+        Fn::Sub: '/applications/pipes/${Stage}/api-gateway/id'
+      Type: String
+      Value:
+        Ref: ApiGatewayRestApi
+
+  ApiPath:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name:
+        Fn::Sub: '/application/pipes/${Stage}/api-gateway/path'
+      Type: String
+      Value:
+        Fn::Sub: '${Stage}/com.pipesdata/v1'
+
+  ApiKey:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name:
+        Fn::Sub: '/application/pipes/${Stage}/api-gateway/key'
+      Type: String
+      Value: 'no key'
+

@@ -1,7 +1,7 @@
 TEMPLATES = template api.template firehose.template 
 
 CFN_BUCKET :=pipes-cf-artifacts
-STACK_NAME := tarasowski-pipes-local-test
+STACK_NAME := tarasowski-pipes-local-test-2
 
 deploy:
 	aws cloudformation package --template ./infrastructure/app/template.yaml --s3-bucket $(CFN_BUCKET) --output json > ./infrastructure/app/output.json
