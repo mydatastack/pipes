@@ -10,7 +10,7 @@
   "author": "Dimitri Tarasowski",
   "license": "ISC",
   "dependencies": {
-    "ajv": "^6.10.0"
+    "ajv": "^6.12.3"
   },
   "devDependencies": {
     "aws-sdk": "^2.467.0",
